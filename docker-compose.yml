@@ -1,0 +1,162 @@
+version: '3.8'
+
+services:
+  # Development configuration with SQLite
+  scoreboard-api-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: scoreboard-api-dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DATABASE_TYPE=sqlite
+      - SQLITE_DATABASE_PATH=./data/scoreboard-dev.db
+      - CORS_ORIGIN=http://localhost:3000
+      - RATE_LIMIT_MAX_REQUESTS=1000
+    volumes:
+      - ./data:/app/data
+      - ./src:/app/src
+      - ./env.example:/app/.env
+    command: npm run dev
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health/liveness', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Production configuration with SQLite
+  scoreboard-api-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: scoreboard-api-prod
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_TYPE=sqlite
+      - SQLITE_DATABASE_PATH=./data/scoreboard-prod.db
+      - CORS_ORIGIN=http://localhost:3000
+      - RATE_LIMIT_MAX_REQUESTS=100
+    volumes:
+      - ./data:/app/data
+      - ./env.example:/app/.env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health/liveness', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL configuration (for future use)
+  scoreboard-api-postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: scoreboard-api-postgres
+    ports:
+      - "3002:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_TYPE=postgres
+      - POSTGRES_HOST=postgres-db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DATABASE=scoreboard
+      - POSTGRES_USERNAME=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_SSL=false
+      - CORS_ORIGIN=http://localhost:3000
+      - RATE_LIMIT_MAX_REQUESTS=100
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health/liveness', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL database service
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: scoreboard-postgres
+    environment:
+      - POSTGRES_DB=scoreboard
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d scoreboard"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # DynamoDB Local (for future use)
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: scoreboard-dynamodb-local
+    ports:
+      - "8000:8000"
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    volumes:
+      - dynamodb_data:/home/dynamodblocal/data
+    restart: unless-stopped
+
+  # DynamoDB configuration (for future use)
+  scoreboard-api-dynamodb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: scoreboard-api-dynamodb
+    ports:
+      - "3003:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_TYPE=dynamodb
+      - DYNAMODB_REGION=us-east-1
+      - DYNAMODB_ENDPOINT_URL=http://dynamodb-local:8000
+      - DYNAMODB_TABLES_GAMES=scoreboard-games
+      - DYNAMODB_TABLES_TEAMS=scoreboard-teams
+      - DYNAMODB_TABLES_COLLECTIONS=scoreboard-collections
+      - DYNAMODB_TABLES_SCHEDULES=scoreboard-schedules
+      - CORS_ORIGIN=http://localhost:3000
+      - RATE_LIMIT_MAX_REQUESTS=100
+    depends_on:
+      - dynamodb-local
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health/liveness', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
+    driver: local
+  dynamodb_data:
+    driver: local
+
+networks:
+  default:
+    name: scoreboard-network
