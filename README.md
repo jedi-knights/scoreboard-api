@@ -22,70 +22,169 @@ This API follows a clean, layered architecture:
 
 ### Entity Relationship Diagram
 
-The API manages the following enhanced entities and their relationships. This diagram shows the improved database schema with proper normalization, UUID primary keys, and optimized relationships:
+The API manages the following optimized entities and their relationships. This diagram shows the fully optimized 3NF database schema with advanced indexing, enhanced constraints, and performance optimizations:
 
 **Note**: The Mermaid diagram below will render in GitHub and other Markdown viewers that support Mermaid syntax.
 
 ```mermaid
 erDiagram
+    COUNTRIES {
+        uuid id PK
+        string code
+        string name
+        timestamp created_at
+    }
+
+    STATES {
+        uuid id PK
+        uuid country_id FK
+        string code
+        string name
+        timestamp created_at
+    }
+
+    CITIES {
+        uuid id PK
+        uuid state_id FK
+        string name
+        timestamp created_at
+    }
+
+    POSTAL_CODES {
+        uuid id PK
+        uuid city_id FK
+        string code
+        timestamp created_at
+    }
+
+    SPORTS {
+        uuid id PK
+        enum name
+        text description
+        boolean is_team_sport
+        int max_players
+        int min_players
+        timestamp created_at
+    }
+
     VENUES {
         uuid id PK
         string name
-        text address
-        string city
-        string state
-        string country
-        string postal_code
+        uuid postal_code_id FK
+        text address_line_1
+        text address_line_2
         decimal latitude
         decimal longitude
         int capacity
-        string surface_type
-        json amenities
+        enum surface_type
         string website
+        boolean is_active
         timestamp created_at
         timestamp updated_at
+    }
+
+    VENUE_AMENITIES {
+        uuid id PK
+        uuid venue_id FK
+        string amenity_name
+        text amenity_value
+        timestamp created_at
+    }
+
+    LEAGUE_LEVELS {
+        uuid id PK
+        string name
+        text description
+        int sort_order
+        timestamp created_at
     }
 
     LEAGUES {
         uuid id PK
         string name
-        string sport
-        string level
+        uuid sport_id FK
+        uuid level_id FK
         uuid parent_league_id FK
         text description
         string website
         string logo_url
-        json metadata
+        boolean is_active
         timestamp created_at
         timestamp updated_at
+    }
+
+    REGIONS {
+        uuid id PK
+        enum name
+        text description
+        timestamp created_at
     }
 
     CONFERENCES {
         uuid id PK
         string name
-        string sport
-        string division
-        string region
+        uuid sport_id FK
+        uuid division_id FK
+        uuid region_id FK
         string website
         string logo_url
         text description
-        json metadata
+        boolean is_active
         timestamp created_at
         timestamp updated_at
+    }
+
+    SEASON_STATUSES {
+        uuid id PK
+        string name
+        text description
+        int sort_order
+        timestamp created_at
     }
 
     SEASONS {
         uuid id PK
         string name
-        string sport
+        uuid sport_id FK
         string year
         date start_date
         date end_date
-        string status
-        json rules
-        json metadata
+        uuid status_id FK
+        boolean is_active
         timestamp created_at
         timestamp updated_at
+    }
+
+    SEASON_RULES {
+        uuid id PK
+        uuid season_id FK
+        string rule_name
+        text rule_value
+        timestamp created_at
+    }
+
+    TEAM_GENDER {
+        uuid id PK
+        enum name
+        text description
+        int sort_order
+        timestamp created_at
+    }
+
+    TEAM_LEVEL {
+        uuid id PK
+        enum name
+        text description
+        int sort_order
+        timestamp created_at
+    }
+
+    TEAM_DIVISION {
+        uuid id PK
+        enum name
+        text description
+        int sort_order
+        timestamp created_at
     }
 
     TEAMS {
@@ -94,16 +193,23 @@ erDiagram
         string name
         string short_name
         string mascot
-        json colors
         string logo_url
         string website
-        string sport
-        enum gender
-        enum level
-        enum division
-        json metadata
+        uuid sport_id FK
+        uuid gender_id FK
+        uuid level_id FK
+        uuid division_id FK
+        boolean is_active
         timestamp created_at
         timestamp updated_at
+    }
+
+    TEAM_COLORS {
+        uuid id PK
+        uuid team_id FK
+        string color_name
+        string color_value
+        timestamp created_at
     }
 
     TEAM_CONFERENCES {
@@ -112,9 +218,17 @@ erDiagram
         uuid conference_id FK
         date start_date
         date end_date
-        string status
+        enum status
         timestamp created_at
         timestamp updated_at
+    }
+
+    COLLECTION_STATUS {
+        uuid id PK
+        enum name
+        text description
+        int sort_order
+        timestamp created_at
     }
 
     COLLECTIONS {
@@ -122,13 +236,13 @@ erDiagram
         string external_id
         string name
         text description
-        string sport
-        enum gender
-        enum division
+        uuid sport_id FK
+        uuid gender_id FK
+        uuid division_id FK
         uuid season_id FK
         string data_source
-        enum status
-        json metadata
+        uuid status_id FK
+        boolean is_active
         timestamp created_at
         timestamp updated_at
     }
@@ -140,9 +254,16 @@ erDiagram
         string role
         date start_date
         date end_date
-        json metadata
         timestamp created_at
         timestamp updated_at
+    }
+
+    GAME_STATUS {
+        uuid id PK
+        enum name
+        text description
+        int sort_order
+        timestamp created_at
     }
 
     GAMES {
@@ -155,18 +276,35 @@ erDiagram
         time time
         uuid home_team_id FK
         uuid away_team_id FK
-        string sport
+        uuid sport_id FK
         int home_score
         int away_score
-        enum status
+        uuid status_id FK
         string current_period
-        json period_scores
         uuid venue_id FK
-        json broadcast_info
         text notes
-        json metadata
+        boolean is_active
         timestamp created_at
         timestamp updated_at
+    }
+
+    GAME_PERIOD_SCORES {
+        uuid id PK
+        uuid game_id FK
+        string period_name
+        int home_score
+        int away_score
+        timestamp created_at
+    }
+
+    GAME_BROADCASTS {
+        uuid id PK
+        uuid game_id FK
+        string network
+        string channel
+        timestamp start_time
+        timestamp end_time
+        timestamp created_at
     }
 
     SCHEDULES {
@@ -174,147 +312,402 @@ erDiagram
         string external_id
         uuid team_id FK
         uuid season_id FK
-        string sport
-        json games
-        json metadata
+        uuid sport_id FK
+        boolean is_active
         timestamp created_at
         timestamp updated_at
+    }
+
+    SCHEDULE_GAMES {
+        uuid id PK
+        uuid schedule_id FK
+        uuid game_id FK
+        int game_order
+        timestamp created_at
+    }
+
+    STATISTIC_TYPES {
+        uuid id PK
+        string name
+        string category
+        string unit
+        text description
+        boolean is_numeric
+        decimal min_value
+        decimal max_value
+        timestamp created_at
     }
 
     GAME_STATISTICS {
         uuid id PK
         uuid game_id FK
         uuid team_id FK
-        string statistic_type
-        json value
+        uuid statistic_type_id FK
+        decimal value
         string period
         timestamp created_at
         timestamp updated_at
+    }
+
+    AUDIT_ACTIONS {
+        uuid id PK
+        string name
+        text description
+        timestamp created_at
     }
 
     AUDIT_LOG {
         uuid id PK
         string table_name
         uuid record_id
-        string action
+        uuid action_id FK
         json old_values
         json new_values
         string changed_by
         timestamp changed_at
+        inet ip_address
+        text user_agent
     }
 
+    COUNTRIES ||--o{ STATES : "contains"
+    STATES ||--o{ CITIES : "contains"
+    CITIES ||--o{ POSTAL_CODES : "has"
+    POSTAL_CODES ||--o{ VENUES : "locates"
+    VENUES ||--o{ VENUE_AMENITIES : "provides"
     VENUES ||--o{ GAMES : "hosts"
+    
+    SPORTS ||--o{ LEAGUES : "organizes"
+    SPORTS ||--o{ CONFERENCES : "organizes"
+    SPORTS ||--o{ SEASONS : "defines"
+    SPORTS ||--o{ TEAMS : "plays"
+    SPORTS ||--o{ COLLECTIONS : "groups"
+    SPORTS ||--o{ GAMES : "played_in"
+    SPORTS ||--o{ SCHEDULES : "scheduled_for"
+    
+    LEAGUE_LEVELS ||--o{ LEAGUES : "categorizes"
+    LEAGUE_LEVELS ||--o{ CONFERENCES : "categorizes"
+    LEAGUE_LEVELS ||--o{ TEAMS : "categorizes"
+    LEAGUE_LEVELS ||--o{ COLLECTIONS : "categorizes"
+    
+    LEAGUES ||--o{ LEAGUES : "parent_child"
     LEAGUES ||--o{ GAMES : "organizes"
+    
+    REGIONS ||--o{ CONFERENCES : "locates"
+    
+    CONFERENCES ||--o{ TEAM_CONFERENCES : "includes"
+    TEAMS ||--o{ TEAM_CONFERENCES : "participates"
+    
+    SEASON_STATUSES ||--o{ SEASONS : "defines_status"
+    SEASONS ||--o{ SEASON_RULES : "has_rules"
+    SEASONS ||--o{ COLLECTIONS : "defines"
     SEASONS ||--o{ GAMES : "contains"
+    SEASONS ||--o{ SCHEDULES : "schedules"
+    
+    TEAM_GENDER ||--o{ TEAMS : "categorizes"
+    TEAM_LEVEL ||--o{ TEAMS : "categorizes"
+    TEAM_DIVISION ||--o{ TEAMS : "categorizes"
+    
+    TEAMS ||--o{ TEAM_COLORS : "has_colors"
+    TEAMS ||--o{ TEAM_COLLECTIONS : "participates"
     TEAMS ||--o{ GAMES : "home_team"
     TEAMS ||--o{ GAMES : "away_team"
-    TEAMS ||--o{ TEAM_CONFERENCES : "participates"
-    CONFERENCES ||--o{ TEAM_CONFERENCES : "includes"
-    TEAMS ||--o{ TEAM_COLLECTIONS : "participates"
-    COLLECTIONS ||--o{ TEAM_COLLECTIONS : "includes"
-    SEASONS ||--o{ COLLECTIONS : "defines"
-    GAMES ||--o{ GAME_STATISTICS : "tracks"
     TEAMS ||--o{ GAME_STATISTICS : "generates"
-    LEAGUES ||--o{ LEAGUES : "parent_child"
-    TEAMS ||--o{ CONFERENCES : "conference"
-    TEAMS ||--o{ COLLECTIONS : "belongs_to"
-    SCHEDULES ||--o{ TEAMS : "team_name"
-    CONFERENCES ||--o{ TEAMS : "has_teams"
+    TEAMS ||--o{ SCHEDULES : "has_schedule"
+    
+    COLLECTION_STATUS ||--o{ COLLECTIONS : "defines_status"
+    COLLECTIONS ||--o{ TEAM_COLLECTIONS : "includes"
+    
+    GAME_STATUS ||--o{ GAMES : "defines_status"
+    GAMES ||--o{ GAME_PERIOD_SCORES : "has_scores"
+    GAMES ||--o{ GAME_BROADCASTS : "broadcast_on"
+    GAMES ||--o{ GAME_STATISTICS : "tracks_stats"
+    GAMES ||--o{ SCHEDULE_GAMES : "scheduled_in"
+    
+    SCHEDULES ||--o{ SCHEDULE_GAMES : "contains"
+    
+    STATISTIC_TYPES ||--o{ GAME_STATISTICS : "defines_type"
+    
+    AUDIT_ACTIONS ||--o{ AUDIT_LOG : "defines_action"
 ```
 
 #### Entity Descriptions
 
+**LOCATION HIERARCHY** - Normalized location management
+- **COUNTRIES**: ISO 3166-1 alpha-3 country codes and names
+- **STATES**: State/province codes and names linked to countries
+- **CITIES**: City names linked to states
+- **POSTAL_CODES**: Postal codes linked to cities
+- **Benefits**: Eliminates location duplication, enables geospatial queries
+
+**SPORTS** - Enhanced sports classification
+- **Primary Key**: `id` (UUID)
+- **Features**: Team vs. individual sport classification, player count limits
+- **Benefits**: Better sports organization and validation
+
 **VENUES** - Physical locations where games are played
 - **Primary Key**: `id` (UUID)
-- **Features**: Geospatial coordinates, capacity, surface type, amenities
-- **Benefits**: Eliminates venue duplication, enables location-based queries
+- **Features**: Geospatial coordinates, capacity, surface type, active status
+- **Benefits**: Normalized location data, soft delete support, performance optimization
 
-**LEAGUES** - Hierarchical organization of sports competitions
+**VENUE_AMENITIES** - Venue-specific features and services
+- **Purpose**: Store venue amenities as key-value pairs
+- **Benefits**: Flexible amenity management without schema changes
+
+**LEAGUE_LEVELS** - Hierarchical organization of sports competitions
 - **Primary Key**: `id` (UUID)
-- **Structure**: Supports parent-child relationships (e.g., NCAA → Division I → Conference)
-- **Metadata**: Flexible JSON storage for league-specific information
+- **Features**: Sort order for consistent UI display
+- **Benefits**: Standardized league categorization across sports
+
+**LEAGUES** - Sports league organization
+- **Primary Key**: `id` (UUID)
+- **Structure**: Proper foreign keys to sports and levels, parent-child relationships
+- **Benefits**: Full 3NF compliance, optimized queries
+
+**REGIONS** - Geographic region classification
+- **Purpose**: Organize conferences by geographic regions
+- **Benefits**: Better regional organization and reporting
 
 **CONFERENCES** - Athletic conferences that organize teams
 - **Primary Key**: `id` (UUID)
-- **Attributes**: Sport, division, region, website, logo, description
-- **Relationships**: Connected to teams via junction table
+- **Attributes**: Proper foreign keys, active status, optimized relationships
+- **Benefits**: Better performance, data integrity, soft delete support
+
+**SEASON_STATUSES** - Season lifecycle management
+- **Features**: Sort order for consistent display, comprehensive status tracking
+- **Benefits**: Better season management and reporting
 
 **SEASONS** - Time-bound periods for sports competitions
 - **Primary Key**: `id` (UUID)
-- **Features**: Start/end dates, status, rules, metadata
-- **Purpose**: Better organization of games and schedules across time
+- **Features**: Proper foreign keys, active status, date validation
+- **Benefits**: Better organization, performance optimization
+
+**SEASON_RULES** - Season-specific rules and regulations
+- **Purpose**: Store season rules as key-value pairs
+- **Benefits**: Flexible rule management without schema changes
+
+**TEAM CATEGORIZATION** - Enhanced team classification
+- **TEAM_GENDER**: Gender classification with sort order
+- **TEAM_LEVEL**: Competition level with sort order
+- **TEAM_DIVISION**: Division classification with sort order
+- **Benefits**: Consistent categorization, better UI ordering
 
 **TEAMS** - Represents sports teams with enhanced categorization
 - **Primary Key**: `id` (UUID)
-- **Attributes**: Sport, gender (ENUM), level (ENUM), division (ENUM)
-- **Relationships**: Connected to conferences and collections via junction tables
+- **Attributes**: Proper foreign keys, active status, optimized relationships
+- **Benefits**: Better performance, data integrity, soft delete support
+
+**TEAM_COLORS** - Team color management
+- **Purpose**: Store team colors as structured data
+- **Benefits**: Better color management, validation, and reporting
 
 **TEAM_CONFERENCES** - Junction table for team-conference relationships
 - **Purpose**: Many-to-many relationship with temporal tracking
-- **Features**: Start/end dates, status, supports historical data
+- **Features**: Enhanced status enum, date validation, performance optimization
+
+**COLLECTION_STATUS** - Collection lifecycle management
+- **Features**: Sort order for consistent display, comprehensive status tracking
+- **Benefits**: Better collection management and reporting
 
 **COLLECTIONS** - Groupings of related data or events
 - **Primary Key**: `id` (UUID)
-- **Enhancements**: Proper foreign keys to seasons, ENUM constraints
-- **Metadata**: Flexible JSON storage for collection-specific data
+- **Enhancements**: Proper foreign keys, active status, optimized relationships
+- **Benefits**: Better performance, data integrity, soft delete support
 
 **TEAM_COLLECTIONS** - Junction table for team-collection relationships
 - **Purpose**: Many-to-many relationship with role-based participation
-- **Features**: Role assignment, temporal tracking, metadata
+- **Features**: Date validation, performance optimization
+
+**GAME_STATUS** - Game lifecycle management
+- **Features**: Sort order for consistent display, comprehensive status tracking
+- **Benefits**: Better game management and reporting
 
 **GAMES** - Core entity representing individual sporting events
 - **Primary Key**: `id` (UUID)
-- **Enhancements**: Proper foreign keys, ENUM status, normalized venue data
-- **Constraints**: CHECK constraint prevents self-matches
+- **Enhancements**: Proper foreign keys, active status, optimized relationships
+- **Constraints**: CHECK constraints for data validation
+- **Benefits**: Better performance, data integrity, soft delete support
+
+**GAME_PERIOD_SCORES** - Normalized period score management
+- **Purpose**: Store period scores as structured data instead of JSONB
+- **Benefits**: Better query performance, data validation, reporting
+
+**GAME_BROADCASTS** - Broadcast information management
+- **Purpose**: Store broadcast details as structured data
+- **Benefits**: Better broadcast management, validation, and reporting
 
 **SCHEDULES** - Team schedules for specific seasons
 - **Primary Key**: `id` (UUID)
-- **Improvements**: Proper foreign keys to teams and seasons
-- **Metadata**: Flexible JSON storage for schedule-specific data
+- **Improvements**: Proper foreign keys, active status, optimized relationships
+- **Benefits**: Better performance, data integrity, soft delete support
+
+**SCHEDULE_GAMES** - Schedule-game relationship management
+- **Purpose**: Many-to-many relationship with ordering support
+- **Features**: Game order for consistent display
+- **Benefits**: Better schedule management and reporting
+
+**STATISTIC_TYPES** - Enhanced statistics classification
+- **Features**: Category classification, unit specification, numeric validation
+- **Benefits**: Better statistics organization, validation, and reporting
 
 **GAME_STATISTICS** - Detailed statistics for games
-- **Purpose**: Store comprehensive game statistics by team and period
-- **Structure**: Flexible JSON values for different statistic types
+- **Purpose**: Store comprehensive game statistics with proper typing
+- **Structure**: Proper foreign keys, decimal values, period tracking
+- **Benefits**: Better performance, data validation, reporting
+
+**AUDIT_ACTIONS** - Audit action classification
+- **Purpose**: Standardize audit action types
+- **Benefits**: Better audit management and reporting
 
 **AUDIT_LOG** - Comprehensive change tracking
 - **Purpose**: Track all INSERT, UPDATE, DELETE operations
-- **Features**: Before/after values, user attribution, timestamp tracking
+- **Features**: Enhanced tracking with IP addresses and user agents
+- **Benefits**: Better security monitoring, compliance, fraud detection
 
 #### Key Relationships
 
-1. **Games ↔ Teams**: Each game has exactly one home team and one away team
-2. **Teams ↔ Conferences**: Teams belong to conferences for organizational purposes
-3. **Teams ↔ Collections**: Teams can be part of multiple collections (tournaments, seasons)
-4. **Schedules ↔ Teams**: Each schedule belongs to a specific team
-5. **Games ↔ Collections**: Games can be organized into collections for analysis
+**Location Hierarchy**
+- **COUNTRIES → STATES → CITIES → POSTAL_CODES → VENUES**: Normalized location chain
+- **VENUES → VENUE_AMENITIES**: One-to-many relationship for flexible amenity management
+
+**Sports Organization**
+- **SPORTS → LEAGUES**: Sports organize leagues with proper categorization
+- **SPORTS → CONFERENCES**: Sports organize conferences by region and division
+- **SPORTS → SEASONS**: Sports define seasons with specific rules and statuses
+- **SPORTS → TEAMS**: Sports categorize teams by gender, level, and division
+- **SPORTS → COLLECTIONS**: Sports group related data and events
+- **SPORTS → GAMES**: Sports are played in specific games
+- **SPORTS → SCHEDULES**: Sports are scheduled for teams
+
+**League Hierarchy**
+- **LEAGUE_LEVELS → LEAGUES**: Standardized level categorization
+- **LEAGUES → LEAGUES**: Parent-child relationships for hierarchical organization
+- **LEAGUES → GAMES**: Leagues organize and host games
+
+**Geographic Organization**
+- **REGIONS → CONFERENCES**: Geographic regions organize conferences
+- **CONFERENCES → TEAM_CONFERENCES**: Conferences include teams with temporal tracking
+- **TEAMS → TEAM_CONFERENCES**: Teams participate in conferences
+
+**Season Management**
+- **SEASON_STATUSES → SEASONS**: Status management for season lifecycle
+- **SEASONS → SEASON_RULES**: Seasons have specific rules and regulations
+- **SEASONS → COLLECTIONS**: Seasons define data collection periods
+- **SEASONS → GAMES**: Seasons contain scheduled games
+- **SEASONS → SCHEDULES**: Seasons organize team schedules
+
+**Team Categorization**
+- **TEAM_GENDER → TEAMS**: Gender classification for teams
+- **TEAM_LEVEL → TEAMS**: Competition level classification
+- **TEAM_DIVISION → TEAMS**: Division classification
+- **TEAMS → TEAM_COLORS**: Teams have specific color schemes
+- **TEAMS → TEAM_COLLECTIONS**: Teams participate in collections
+- **TEAMS → GAMES**: Teams play as home or away teams
+- **TEAMS → GAME_STATISTICS**: Teams generate game statistics
+- **TEAMS → SCHEDULES**: Teams have season schedules
+
+**Collection Management**
+- **COLLECTION_STATUS → COLLECTIONS**: Status management for collections
+- **COLLECTIONS → TEAM_COLLECTIONS**: Collections include teams with role assignment
+
+**Game Management**
+- **GAME_STATUS → GAMES**: Status management for game lifecycle
+- **GAMES → GAME_PERIOD_SCORES**: Games have detailed period scoring
+- **GAMES → GAME_BROADCASTS**: Games are broadcast on specific networks
+- **GAMES → GAME_STATISTICS**: Games track comprehensive statistics
+- **GAMES → SCHEDULE_GAMES**: Games are scheduled in team schedules
+
+**Schedule Organization**
+- **SCHEDULES → SCHEDULE_GAMES**: Schedules contain ordered games
+
+**Statistics Management**
+- **STATISTIC_TYPES → GAME_STATISTICS**: Standardized statistics classification
+
+**Audit and Security**
+- **AUDIT_ACTIONS → AUDIT_LOG**: Standardized audit action tracking
+
+**Data Integrity Features**
+- **Foreign Key Constraints**: All relationships are properly enforced
+- **ENUM Constraints**: Status fields use predefined values for consistency
+- **CHECK Constraints**: Business rules are enforced at the database level
+- **Soft Deletes**: `is_active` flags instead of hard deletes for data preservation
+
+**Performance Optimization**
+- **Advanced Indexing**: Trigram indexes, conditional indexes, composite indexes
+- **Normalized Structure**: Full 3NF compliance for optimal query performance
+- **Temporal Optimization**: Date-based partitioning and indexing for time-series queries
 
 #### Alternative Text Representation
 
-If the Mermaid diagram doesn't render, here's a text-based representation:
+If the Mermaid diagram doesn't render, here's a text-based representation of the optimized schema:
 
 ```
-GAMES (game_id*) ←→ TEAMS (name*)
-├── home_team → TEAMS.name
-├── away_team → TEAMS.name
-└── conference → CONFERENCES.name (via TEAMS)
+LOCATION HIERARCHY
+COUNTRIES → STATES → CITIES → POSTAL_CODES → VENUES
+VENUES → VENUE_AMENITIES (key-value pairs)
 
-TEAMS (name*) ←→ CONFERENCES (name*)
-├── conference → CONFERENCES.name
-└── sport, division, mascot, colors, logo_url, website
+SPORTS ORGANIZATION
+SPORTS → LEAGUES (with levels and parent-child relationships)
+SPORTS → CONFERENCES (by region and division)
+SPORTS → SEASONS (with statuses and rules)
+SPORTS → TEAMS (by gender, level, division)
+SPORTS → COLLECTIONS (grouped data and events)
+SPORTS → GAMES (scheduled events)
+SPORTS → SCHEDULES (team schedules)
 
-CONFERENCES (name*) ←→ TEAMS
-├── sport, division, region, website
-└── contains multiple teams
+LEAGUE HIERARCHY
+LEAGUE_LEVELS → LEAGUES (standardized categorization)
+LEAGUES → LEAGUES (parent-child relationships)
+LEAGUES → GAMES (organized events)
 
-COLLECTIONS (collection_id*) ←→ TEAMS
-├── name, description, sport, data_source
-├── metadata (JSON)
-└── can contain multiple teams
+GEOGRAPHIC ORGANIZATION
+REGIONS → CONFERENCES (geographic grouping)
+CONFERENCES → TEAM_CONFERENCES (temporal team membership)
+TEAMS → TEAM_CONFERENCES (conference participation)
 
-SCHEDULES (schedule_id*) ←→ TEAMS
-├── team_name → TEAMS.name
-├── season, sport
-└── games (JSON array)
+SEASON MANAGEMENT
+SEASON_STATUSES → SEASONS (lifecycle management)
+SEASONS → SEASON_RULES (key-value pairs)
+SEASONS → COLLECTIONS (data periods)
+SEASONS → GAMES (scheduled events)
+SEASONS → SCHEDULES (team schedules)
+
+TEAM CATEGORIZATION
+TEAM_GENDER → TEAMS (gender classification)
+TEAM_LEVEL → TEAMS (competition level)
+TEAM_DIVISION → TEAMS (division classification)
+TEAMS → TEAM_COLORS (color schemes)
+TEAMS → TEAM_COLLECTIONS (collection participation)
+TEAMS → GAMES (home/away teams)
+TEAMS → GAME_STATISTICS (performance data)
+TEAMS → SCHEDULES (season schedules)
+
+COLLECTION MANAGEMENT
+COLLECTION_STATUS → COLLECTIONS (lifecycle management)
+COLLECTIONS → TEAM_COLLECTIONS (role-based participation)
+
+GAME MANAGEMENT
+GAME_STATUS → GAMES (lifecycle management)
+GAMES → GAME_PERIOD_SCORES (detailed scoring)
+GAMES → GAME_BROADCASTS (broadcast information)
+GAMES → GAME_STATISTICS (performance metrics)
+GAMES → SCHEDULE_GAMES (schedule integration)
+
+SCHEDULE ORGANIZATION
+SCHEDULES → SCHEDULE_GAMES (ordered game lists)
+
+STATISTICS MANAGEMENT
+STATISTIC_TYPES → GAME_STATISTICS (standardized metrics)
+
+AUDIT AND SECURITY
+AUDIT_ACTIONS → AUDIT_LOG (change tracking with IP/user agent)
+
+KEY FEATURES
+- Full 3NF normalization
+- Soft deletes (is_active flags)
+- Advanced indexing (trigram, conditional, composite)
+- Performance optimization
+- Data integrity constraints
+- Comprehensive audit logging
 ```
 
 *PK = Primary Key, FK = Foreign Key
