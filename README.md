@@ -20,6 +20,157 @@ This API follows a clean, layered architecture:
 - **Service Layer Pattern**: Separates business logic from controllers
 - **MVC Pattern**: Organizes code into Model-View-Controller layers
 
+### Entity Relationship Diagram
+
+The API manages the following core entities and their relationships. This diagram shows the database schema and entity relationships:
+
+**Note**: The Mermaid diagram below will render in GitHub and other Markdown viewers that support Mermaid syntax.
+
+```mermaid
+erDiagram
+    GAMES {
+        string game_id PK
+        string data_source
+        string league_name
+        date date
+        string home_team FK
+        string away_team FK
+        string sport
+        int home_score
+        int away_score
+        string status
+        string current_period
+        json period_scores
+        string venue
+        string city
+        string state
+        string country
+        string timezone
+        json broadcast_info
+        text notes
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    TEAMS {
+        string name PK
+        string conference FK
+        string sport
+        string division
+        string mascot
+        string colors
+        string logo_url
+        string website
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    CONFERENCES {
+        string name PK
+        string sport
+        string division
+        string region
+        string website
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    COLLECTIONS {
+        string collection_id PK
+        string name
+        string description
+        string sport
+        string data_source
+        json metadata
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    SCHEDULES {
+        string schedule_id PK
+        string team_name FK
+        string season
+        string sport
+        json games
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    GAMES ||--o{ TEAMS : "home_team"
+    GAMES ||--o{ TEAMS : "away_team"
+    TEAMS ||--o{ CONFERENCES : "conference"
+    TEAMS ||--o{ COLLECTIONS : "belongs_to"
+    SCHEDULES ||--o{ TEAMS : "team_name"
+    CONFERENCES ||--o{ TEAMS : "has_teams"
+```
+
+#### Entity Descriptions
+
+**GAMES** - Core entity representing individual sporting events
+- **Primary Key**: `game_id` (unique identifier)
+- **Relationships**: Connected to teams (home/away) and conferences
+- **Status Values**: scheduled, in_progress, completed, final, postponed, cancelled
+- **Sports**: football, basketball, soccer, baseball, etc.
+
+**TEAMS** - Represents sports teams across different leagues
+- **Primary Key**: `name` (team name)
+- **Relationships**: Belongs to conferences, participates in games
+- **Attributes**: Conference affiliation, sport, division, mascot, colors
+
+**CONFERENCES** - Athletic conferences that organize teams
+- **Primary Key**: `name` (conference name)
+- **Relationships**: Contains multiple teams, organizes competitions
+- **Examples**: NCAA conferences, professional leagues
+
+**COLLECTIONS** - Groupings of related data or events
+- **Primary Key**: `collection_id` (unique identifier)
+- **Purpose**: Organize games, teams, or other entities by theme
+- **Use Cases**: Tournament brackets, season collections, special events
+
+**SCHEDULES** - Team schedules for specific seasons
+- **Primary Key**: `schedule_id` (unique identifier)
+- **Relationships**: Associated with specific teams and seasons
+- **Content**: JSON array of game references and metadata
+
+#### Key Relationships
+
+1. **Games ↔ Teams**: Each game has exactly one home team and one away team
+2. **Teams ↔ Conferences**: Teams belong to conferences for organizational purposes
+3. **Teams ↔ Collections**: Teams can be part of multiple collections (tournaments, seasons)
+4. **Schedules ↔ Teams**: Each schedule belongs to a specific team
+5. **Games ↔ Collections**: Games can be organized into collections for analysis
+
+#### Alternative Text Representation
+
+If the Mermaid diagram doesn't render, here's a text-based representation:
+
+```
+GAMES (game_id*) ←→ TEAMS (name*)
+├── home_team → TEAMS.name
+├── away_team → TEAMS.name
+└── conference → CONFERENCES.name (via TEAMS)
+
+TEAMS (name*) ←→ CONFERENCES (name*)
+├── conference → CONFERENCES.name
+└── sport, division, mascot, colors, logo_url, website
+
+CONFERENCES (name*) ←→ TEAMS
+├── sport, division, region, website
+└── contains multiple teams
+
+COLLECTIONS (collection_id*) ←→ TEAMS
+├── name, description, sport, data_source
+├── metadata (JSON)
+└── can contain multiple teams
+
+SCHEDULES (schedule_id*) ←→ TEAMS
+├── team_name → TEAMS.name
+├── season, sport
+└── games (JSON array)
+```
+
+*PK = Primary Key, FK = Foreign Key
+
 ### Code Quality Standards
 
 The project maintains high code quality through automated tools and best practices:
