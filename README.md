@@ -22,82 +22,200 @@ This API follows a clean, layered architecture:
 
 ### Entity Relationship Diagram
 
-The API manages the following core entities and their relationships. This diagram shows the database schema and entity relationships:
+The API manages the following enhanced entities and their relationships. This diagram shows the improved database schema with proper normalization, UUID primary keys, and optimized relationships:
 
 **Note**: The Mermaid diagram below will render in GitHub and other Markdown viewers that support Mermaid syntax.
 
 ```mermaid
 erDiagram
-    GAMES {
-        string game_id PK
-        string data_source
-        string league_name
-        date date
-        string home_team FK
-        string away_team FK
-        string sport
-        int home_score
-        int away_score
-        string status
-        string current_period
-        json period_scores
-        string venue
+    VENUES {
+        uuid id PK
+        string name
+        text address
         string city
         string state
         string country
-        string timezone
-        json broadcast_info
-        text notes
+        string postal_code
+        decimal latitude
+        decimal longitude
+        int capacity
+        string surface_type
+        json amenities
+        string website
         timestamp created_at
         timestamp updated_at
     }
 
-    TEAMS {
-        string name PK
-        string conference FK
+    LEAGUES {
+        uuid id PK
+        string name
         string sport
-        string division
-        string mascot
-        string colors
-        string logo_url
+        string level
+        uuid parent_league_id FK
+        text description
         string website
+        string logo_url
+        json metadata
         timestamp created_at
         timestamp updated_at
     }
 
     CONFERENCES {
-        string name PK
+        uuid id PK
+        string name
         string sport
         string division
         string region
         string website
+        string logo_url
+        text description
+        json metadata
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    SEASONS {
+        uuid id PK
+        string name
+        string sport
+        string year
+        date start_date
+        date end_date
+        string status
+        json rules
+        json metadata
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    TEAMS {
+        uuid id PK
+        string external_id
+        string name
+        string short_name
+        string mascot
+        json colors
+        string logo_url
+        string website
+        string sport
+        enum gender
+        enum level
+        enum division
+        json metadata
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    TEAM_CONFERENCES {
+        uuid id PK
+        uuid team_id FK
+        uuid conference_id FK
+        date start_date
+        date end_date
+        string status
         timestamp created_at
         timestamp updated_at
     }
 
     COLLECTIONS {
-        string collection_id PK
+        uuid id PK
+        string external_id
         string name
-        string description
+        text description
         string sport
+        enum gender
+        enum division
+        uuid season_id FK
         string data_source
+        enum status
+        json metadata
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    TEAM_COLLECTIONS {
+        uuid id PK
+        uuid team_id FK
+        uuid collection_id FK
+        string role
+        date start_date
+        date end_date
+        json metadata
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    GAMES {
+        uuid id PK
+        string external_id
+        string data_source
+        uuid league_id FK
+        uuid season_id FK
+        date date
+        time time
+        uuid home_team_id FK
+        uuid away_team_id FK
+        string sport
+        int home_score
+        int away_score
+        enum status
+        string current_period
+        json period_scores
+        uuid venue_id FK
+        json broadcast_info
+        text notes
         json metadata
         timestamp created_at
         timestamp updated_at
     }
 
     SCHEDULES {
-        string schedule_id PK
-        string team_name FK
-        string season
+        uuid id PK
+        string external_id
+        uuid team_id FK
+        uuid season_id FK
         string sport
         json games
+        json metadata
         timestamp created_at
         timestamp updated_at
     }
 
-    GAMES ||--o{ TEAMS : "home_team"
-    GAMES ||--o{ TEAMS : "away_team"
+    GAME_STATISTICS {
+        uuid id PK
+        uuid game_id FK
+        uuid team_id FK
+        string statistic_type
+        json value
+        string period
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    AUDIT_LOG {
+        uuid id PK
+        string table_name
+        uuid record_id
+        string action
+        json old_values
+        json new_values
+        string changed_by
+        timestamp changed_at
+    }
+
+    VENUES ||--o{ GAMES : "hosts"
+    LEAGUES ||--o{ GAMES : "organizes"
+    SEASONS ||--o{ GAMES : "contains"
+    TEAMS ||--o{ GAMES : "home_team"
+    TEAMS ||--o{ GAMES : "away_team"
+    TEAMS ||--o{ TEAM_CONFERENCES : "participates"
+    CONFERENCES ||--o{ TEAM_CONFERENCES : "includes"
+    TEAMS ||--o{ TEAM_COLLECTIONS : "participates"
+    COLLECTIONS ||--o{ TEAM_COLLECTIONS : "includes"
+    SEASONS ||--o{ COLLECTIONS : "defines"
+    GAMES ||--o{ GAME_STATISTICS : "tracks"
+    TEAMS ||--o{ GAME_STATISTICS : "generates"
+    LEAGUES ||--o{ LEAGUES : "parent_child"
     TEAMS ||--o{ CONFERENCES : "conference"
     TEAMS ||--o{ COLLECTIONS : "belongs_to"
     SCHEDULES ||--o{ TEAMS : "team_name"
@@ -106,31 +224,61 @@ erDiagram
 
 #### Entity Descriptions
 
-**GAMES** - Core entity representing individual sporting events
-- **Primary Key**: `game_id` (unique identifier)
-- **Relationships**: Connected to teams (home/away) and conferences
-- **Status Values**: scheduled, in_progress, completed, final, postponed, cancelled
-- **Sports**: football, basketball, soccer, baseball, etc.
+**VENUES** - Physical locations where games are played
+- **Primary Key**: `id` (UUID)
+- **Features**: Geospatial coordinates, capacity, surface type, amenities
+- **Benefits**: Eliminates venue duplication, enables location-based queries
 
-**TEAMS** - Represents sports teams across different leagues
-- **Primary Key**: `name` (team name)
-- **Relationships**: Belongs to conferences, participates in games
-- **Attributes**: Conference affiliation, sport, division, mascot, colors
+**LEAGUES** - Hierarchical organization of sports competitions
+- **Primary Key**: `id` (UUID)
+- **Structure**: Supports parent-child relationships (e.g., NCAA → Division I → Conference)
+- **Metadata**: Flexible JSON storage for league-specific information
 
 **CONFERENCES** - Athletic conferences that organize teams
-- **Primary Key**: `name` (conference name)
-- **Relationships**: Contains multiple teams, organizes competitions
-- **Examples**: NCAA conferences, professional leagues
+- **Primary Key**: `id` (UUID)
+- **Attributes**: Sport, division, region, website, logo, description
+- **Relationships**: Connected to teams via junction table
+
+**SEASONS** - Time-bound periods for sports competitions
+- **Primary Key**: `id` (UUID)
+- **Features**: Start/end dates, status, rules, metadata
+- **Purpose**: Better organization of games and schedules across time
+
+**TEAMS** - Represents sports teams with enhanced categorization
+- **Primary Key**: `id` (UUID)
+- **Attributes**: Sport, gender (ENUM), level (ENUM), division (ENUM)
+- **Relationships**: Connected to conferences and collections via junction tables
+
+**TEAM_CONFERENCES** - Junction table for team-conference relationships
+- **Purpose**: Many-to-many relationship with temporal tracking
+- **Features**: Start/end dates, status, supports historical data
 
 **COLLECTIONS** - Groupings of related data or events
-- **Primary Key**: `collection_id` (unique identifier)
-- **Purpose**: Organize games, teams, or other entities by theme
-- **Use Cases**: Tournament brackets, season collections, special events
+- **Primary Key**: `id` (UUID)
+- **Enhancements**: Proper foreign keys to seasons, ENUM constraints
+- **Metadata**: Flexible JSON storage for collection-specific data
+
+**TEAM_COLLECTIONS** - Junction table for team-collection relationships
+- **Purpose**: Many-to-many relationship with role-based participation
+- **Features**: Role assignment, temporal tracking, metadata
+
+**GAMES** - Core entity representing individual sporting events
+- **Primary Key**: `id` (UUID)
+- **Enhancements**: Proper foreign keys, ENUM status, normalized venue data
+- **Constraints**: CHECK constraint prevents self-matches
 
 **SCHEDULES** - Team schedules for specific seasons
-- **Primary Key**: `schedule_id` (unique identifier)
-- **Relationships**: Associated with specific teams and seasons
-- **Content**: JSON array of game references and metadata
+- **Primary Key**: `id` (UUID)
+- **Improvements**: Proper foreign keys to teams and seasons
+- **Metadata**: Flexible JSON storage for schedule-specific data
+
+**GAME_STATISTICS** - Detailed statistics for games
+- **Purpose**: Store comprehensive game statistics by team and period
+- **Structure**: Flexible JSON values for different statistic types
+
+**AUDIT_LOG** - Comprehensive change tracking
+- **Purpose**: Track all INSERT, UPDATE, DELETE operations
+- **Features**: Before/after values, user attribution, timestamp tracking
 
 #### Key Relationships
 
@@ -624,6 +772,13 @@ Your code must pass all of these to be considered valid:
 - Database connection status
 - Memory usage monitoring
 - Error rate tracking
+
+## 📖 **Documentation**
+
+For detailed information about the database design and improvements:
+
+- **[Entity Design Improvements](docs/entity-improvements.md)** - Comprehensive overview of entity design enhancements
+- **[3NF Database Schema](docs/3nf-improvements.md)** - Detailed explanation of Third Normal Form compliance
 
 ## 🤝 Contributing
 
