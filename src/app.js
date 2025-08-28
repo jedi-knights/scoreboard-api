@@ -9,6 +9,7 @@ import 'express-async-errors';
 import { apiConfig } from './config/index.js';
 import { createGamesRoutes } from './routes/games-routes.js';
 import { createHealthRoutes } from './routes/health-routes.js';
+import { generateNavigationLinks, enhanceWithLinks } from './utils/hateoas.js';
 
 /**
  * Express Application
@@ -89,16 +90,26 @@ export function createApp (databaseAdapter) {
 
   // Root endpoint
   app.get('/', (req, res) => {
-    res.json({
+    const rootData = {
       message: 'Scoreboard API',
       version: apiConfig.version,
       environment: apiConfig.environment,
       timestamp: new Date().toISOString(),
-      endpoints: {
-        health: '/health',
-        games: `/api/${apiConfig.version}/games`
-      }
-    });
+      description: 'A comprehensive sports scoreboard API with HATEOAS support',
+      features: [
+        'Real-time game data',
+        'Team and conference management',
+        'Advanced filtering and search',
+        'Hypermedia-driven navigation',
+        'Multiple database backends'
+      ]
+    };
+
+    // Add HATEOAS navigation links
+    const navigationLinks = generateNavigationLinks(req);
+    const enhancedResponse = enhanceWithLinks(req, rootData, navigationLinks);
+
+    res.json(enhancedResponse);
   });
 
   // 404 handler

@@ -157,12 +157,19 @@ jobs:
 
       - name: Check for known vulnerabilities
         run: |
-          if npm audit --audit-level=moderate 2>&1 | grep -q "found"; then
+          # Run npm audit and capture the output
+          AUDIT_OUTPUT=$(npm audit --audit-level=moderate 2>&1)
+          
+          # Check if there are actual vulnerabilities (not just "found 0 vulnerabilities")
+          if echo "$AUDIT_OUTPUT" | grep -q "found [1-9]"; then
             echo "❌ Security vulnerabilities found"
-            npm audit --audit-level=moderate
+            echo "$AUDIT_OUTPUT"
             exit 1
+          elif echo "$AUDIT_OUTPUT" | grep -q "found 0"; then
+            echo "✅ No security vulnerabilities found"
+          else
+            echo "✅ Security audit completed successfully"
           fi
-          echo "✅ No security vulnerabilities found"
 
   # Docker Build & Test
   docker-build:

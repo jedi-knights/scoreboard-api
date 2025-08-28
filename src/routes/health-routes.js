@@ -1,4 +1,5 @@
 import express from 'express';
+import { generateNavigationLinks, enhanceWithLinks } from '../utils/hateoas.js';
 
 /**
  * Health Check Routes
@@ -38,7 +39,11 @@ export function createHealthRoutes (databaseAdapter) {
         }
       }
 
-      res.status(200).json(healthData);
+      // Add HATEOAS navigation links
+      const navigationLinks = generateNavigationLinks(req);
+      const enhancedResponse = enhanceWithLinks(req, healthData, navigationLinks);
+
+      res.status(200).json(enhancedResponse);
     } catch (error) {
       console.error('Health check error:', error);
       res.status(500).json({

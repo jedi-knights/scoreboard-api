@@ -71,15 +71,28 @@ describe('API Health Endpoint Integration Tests', () => {
         .expect(404);
     });
 
-    it('should return 200 for root path with API info', async () => {
+    it('should return 200 for root path with API info and HATEOAS links', async () => {
       const response = await request(app)
         .get('/')
         .expect(200);
 
       expect(response.body).toHaveProperty('message');
       expect(response.body).toHaveProperty('version');
-      expect(response.body).toHaveProperty('endpoints');
+      expect(response.body).toHaveProperty('_links');
+      expect(response.body).toHaveProperty('_meta');
       expect(response.body.message).toBe('Scoreboard API');
+      
+      // Check HATEOAS structure
+      expect(response.body._links).toHaveProperty('self');
+      expect(response.body._links).toHaveProperty('health');
+      expect(response.body._links).toHaveProperty('games');
+      expect(response.body._links).toHaveProperty('teams');
+      expect(response.body._links).toHaveProperty('conferences');
+      
+      // Check metadata
+      expect(response.body._meta).toHaveProperty('apiVersion');
+      expect(response.body._meta).toHaveProperty('baseUrl');
+      expect(response.body._meta).toHaveProperty('generatedAt');
     });
   });
 
