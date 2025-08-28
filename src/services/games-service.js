@@ -323,6 +323,11 @@ export class GamesService {
   sanitizeFilters (filters) {
     const sanitized = {};
 
+    // Handle undefined or null filters
+    if (!filters) {
+      return sanitized;
+    }
+
     // Process each filter type
     const dateFilter = this._sanitizeStringFilter(filters.date);
     if (dateFilter) sanitized.date = dateFilter;
@@ -419,7 +424,7 @@ export class GamesService {
     const requiredFields = ['game_id', 'date', 'home_team', 'away_team', 'sport', 'status', 'data_source'];
 
     for (const field of requiredFields) {
-      if (!gameData[field]) {
+      if (gameData[field] === undefined || gameData[field] === null) {
         throw new Error(`Missing required field: ${field}`);
       }
     }

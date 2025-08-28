@@ -62,7 +62,7 @@ jest.mock('path', () => ({
 }));
 
 // Global unit test utilities
-global.unitTestUtils = {
+globalThis.unitTestUtils = {
   // Create mock database adapter
   createMockDatabaseAdapter: () => ({
     connect: jest.fn(),

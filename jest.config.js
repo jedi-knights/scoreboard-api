@@ -2,19 +2,6 @@ export default {
   // Test environment
   testEnvironment: 'node',
   
-  // ES modules support
-  extensionsToTreatAsEsm: ['.js'],
-  globals: {
-    'ts-jest': {
-      useESM: true,
-    },
-  },
-  
-  // Module name mapping for ES modules
-  moduleNameMapping: {
-    '^(\\.{1,2}/.*)\\.js$': '$1',
-  },
-  
   // Test file patterns
   testMatch: [
     '**/tests/**/*.test.js',
@@ -47,12 +34,6 @@ export default {
     'html'
   ],
   
-  // Setup files
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
-  
-  // Test timeout (longer for integration tests)
-  testTimeout: 30000,
-  
   // Verbose output
   verbose: true,
   
@@ -69,15 +50,11 @@ export default {
   projects: [
     {
       displayName: 'unit',
-      testMatch: ['<rootDir>/tests/unit/**/*.test.js'],
-      testTimeout: 5000,
-      setupFilesAfterEnv: ['<rootDir>/tests/setup-unit.js']
+      testMatch: ['<rootDir>/tests/unit/**/*.test.js']
     },
     {
       displayName: 'integration',
-      testMatch: ['<rootDir>/tests/integration/**/*.test.js'],
-      testTimeout: 30000,
-      setupFilesAfterEnv: ['<rootDir>/tests/setup-integration.js']
+      testMatch: ['<rootDir>/tests/integration/**/*.test.js']
     }
   ]
 };

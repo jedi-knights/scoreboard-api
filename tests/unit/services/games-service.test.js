@@ -4,6 +4,7 @@
  * Tests business logic without external dependencies.
  */
 
+import { jest, describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { GamesService } from '../../../src/services/games-service.js';
 
 describe('GamesService', () => {
@@ -12,14 +13,30 @@ describe('GamesService', () => {
 
   beforeEach(() => {
     // Create mock database adapter
-    mockDatabaseAdapter = global.unitTestUtils.createMockDatabaseAdapter();
+    mockDatabaseAdapter = {
+      connect: jest.fn(),
+      disconnect: jest.fn(),
+      isConnected: jest.fn(() => true),
+      query: jest.fn(),
+      get: jest.fn(),
+      run: jest.fn(),
+      beginTransaction: jest.fn(),
+      commitTransaction: jest.fn(),
+      rollbackTransaction: jest.fn(),
+      getHealthStatus: jest.fn(() => ({ status: 'healthy' })),
+      createTables: jest.fn(),
+      dropTables: jest.fn()
+    };
     
     // Create games service instance
     gamesService = new GamesService(mockDatabaseAdapter);
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    // Clear all mocks
+    if (typeof jest !== 'undefined') {
+      jest.clearAllMocks();
+    }
   });
 
   describe('sanitizeFilters', () => {
@@ -194,7 +211,7 @@ describe('GamesService', () => {
         date: '2024-09-15',
         home_team: 'Stanford',
         away_team: 'Berkeley',
-        sport: '', // Empty sport
+        sport: '', // Empty sport - should fail length validation
         status: 'scheduled',
         data_source: 'ncaa'
       };
