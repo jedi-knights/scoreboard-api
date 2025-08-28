@@ -191,7 +191,9 @@ jobs:
       - name: Test Docker image
         run: |
           # Test that the image can start
-          docker run --rm -d --name test-container -p 3000:3000 scoreboard-api:test
+          CONTAINER_NAME="test-container-$(date +%s)"
+          CONTAINER_ID=$(docker run -d --name "$CONTAINER_NAME" -p 3000:3000 scoreboard-api:test)
+          echo "Container started with ID: $CONTAINER_ID and name: $CONTAINER_NAME"
           
           # Wait for container to start
           sleep 10
@@ -199,9 +201,9 @@ jobs:
           # Test health endpoint
           curl -f http://localhost:3000/health/liveness || exit 1
           
-          # Cleanup
-          docker stop test-container
-          docker rm test-container
+          # Cleanup - stop and remove the container using the captured ID
+          docker stop "$CONTAINER_ID" || true
+          docker rm "$CONTAINER_ID" || true
           
           echo "✅ Docker image test passed"
 
