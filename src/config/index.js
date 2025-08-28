@@ -1,12 +1,12 @@
 import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
+// import path from 'path'; // Unused for now
+// import { fileURLToPath } from 'url'; // Unused for now
 
 // Load environment variables
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// const __filename = fileURLToPath(import.meta.url); // Unused for now
+// const _dirname = path.dirname(__filename); // Unused for now
 
 // Database configuration
 const databaseConfig = {

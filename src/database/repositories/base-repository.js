@@ -1,11 +1,11 @@
 /**
  * Base Repository Interface
- * 
+ *
  * This abstract class defines the contract that all repositories must implement.
  * It follows the Repository pattern to abstract data access logic.
  */
 export class BaseRepository {
-  constructor(databaseAdapter) {
+  constructor (databaseAdapter) {
     if (this.constructor === BaseRepository) {
       throw new Error('BaseRepository is an abstract class and cannot be instantiated directly');
     }
@@ -14,75 +14,75 @@ export class BaseRepository {
 
   /**
    * Find all entities with optional filters
-   * @param {Object} filters - Filter criteria
-   * @param {Object} options - Query options (limit, offset, sort, etc.)
+   * @param {Object} _filters - Filter criteria
+   * @param {Object} _options - Query options (limit, offset, sort, etc.)
    * @returns {Promise<Array>} Array of entities
    */
-  async findAll(filters = {}, options = {}) {
+  async findAll (_filters = {}, _options = {}) {
     throw new Error('findAll() method must be implemented by subclass');
   }
 
   /**
    * Find a single entity by ID
-   * @param {string|number} id - Entity identifier
+   * @param {string|number} _id - Entity identifier
    * @returns {Promise<Object|null>} Entity or null if not found
    */
-  async findById(id) {
+  async findById (_id) {
     throw new Error('findById() method must be implemented by subclass');
   }
 
   /**
    * Find a single entity by criteria
-   * @param {Object} criteria - Search criteria
+   * @param {Object} _criteria - Search criteria
    * @returns {Promise<Object|null>} Entity or null if not found
    */
-  async findOne(criteria) {
+  async findOne (_criteria) {
     throw new Error('findOne() method must be implemented by subclass');
   }
 
   /**
    * Create a new entity
-   * @param {Object} data - Entity data
+   * @param {Object} _data - Entity data
    * @returns {Promise<Object>} Created entity
    */
-  async create(data) {
+  async create (_data) {
     throw new Error('create() method must be implemented by subclass');
   }
 
   /**
    * Update an existing entity
-   * @param {string|number} id - Entity identifier
-   * @param {Object} data - Update data
+   * @param {string|number} _id - Entity identifier
+   * @param {Object} _data - Update data
    * @returns {Promise<Object|null>} Updated entity or null if not found
    */
-  async update(id, data) {
+  async update (_id, _data) {
     throw new Error('update() method must be implemented by subclass');
   }
 
   /**
    * Delete an entity
-   * @param {string|number} id - Entity identifier
+   * @param {string|number} _id - Entity identifier
    * @returns {Promise<boolean>} True if deleted, false if not found
    */
-  async delete(id) {
+  async delete (_id) {
     throw new Error('delete() method must be implemented by subclass');
   }
 
   /**
    * Count entities matching criteria
-   * @param {Object} filters - Filter criteria
+   * @param {Object} _filters - Filter criteria
    * @returns {Promise<number>} Count of matching entities
    */
-  async count(filters = {}) {
+  async count (_filters = {}) {
     throw new Error('count() method must be implemented by subclass');
   }
 
   /**
    * Check if an entity exists
-   * @param {Object} criteria - Search criteria
+   * @param {Object} _criteria - Search criteria
    * @returns {Promise<boolean>} True if entity exists
    */
-  async exists(criteria) {
+  async exists (_criteria) {
     throw new Error('exists() method must be implemented by subclass');
   }
 
@@ -92,7 +92,7 @@ export class BaseRepository {
    * @param {Array} params - Query parameters
    * @returns {Promise<any>} Query result
    */
-  async executeQuery(query, params = []) {
+  async executeQuery (query, params = []) {
     return this.db.query(query, params);
   }
 
@@ -102,7 +102,7 @@ export class BaseRepository {
    * @param {Array} params - Query parameters
    * @returns {Promise<Object|null>} Query result or null
    */
-  async executeQuerySingle(query, params = []) {
+  async executeQuerySingle (query, params = []) {
     return this.db.get(query, params);
   }
 
@@ -112,7 +112,7 @@ export class BaseRepository {
    * @param {Array} params - Query parameters
    * @returns {Promise<Object>} Query result
    */
-  async executeQueryRun(query, params = []) {
+  async executeQueryRun (query, params = []) {
     return this.db.run(query, params);
   }
 
@@ -120,7 +120,7 @@ export class BaseRepository {
    * Begin a transaction
    * @returns {Promise<Object>} Transaction object
    */
-  async beginTransaction() {
+  async beginTransaction () {
     return this.db.beginTransaction();
   }
 
@@ -129,7 +129,7 @@ export class BaseRepository {
    * @param {Object} transaction - Transaction object
    * @returns {Promise<void>}
    */
-  async commitTransaction(transaction) {
+  async commitTransaction (transaction) {
     return this.db.commitTransaction(transaction);
   }
 
@@ -138,7 +138,7 @@ export class BaseRepository {
    * @param {Object} transaction - Transaction object
    * @returns {Promise<void>}
    */
-  async rollbackTransaction(transaction) {
+  async rollbackTransaction (transaction) {
     return this.db.rollbackTransaction(transaction);
   }
 }

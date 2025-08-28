@@ -2,12 +2,12 @@ import { GamesService } from '../services/games-service.js';
 
 /**
  * Games Controller
- * 
+ *
  * Handles HTTP requests for games endpoints.
  * Implements the MVC pattern by delegating business logic to the service layer.
  */
 export class GamesController {
-  constructor(databaseAdapter) {
+  constructor (databaseAdapter) {
     this.gamesService = new GamesService(databaseAdapter);
   }
 
@@ -16,7 +16,7 @@ export class GamesController {
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object
    */
-  async getGames(req, res) {
+  async getGames (req, res) {
     try {
       const filters = req.query;
       const options = {
@@ -27,7 +27,7 @@ export class GamesController {
       };
 
       const result = await this.gamesService.getGames(filters, options);
-      
+
       res.status(200).json(result);
     } catch (error) {
       console.error('Error in getGames controller:', error);
@@ -44,15 +44,15 @@ export class GamesController {
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object
    */
-  async getGameById(req, res) {
+  async getGameById (req, res) {
     try {
       const { id } = req.params;
       const result = await this.gamesService.getGameById(id);
-      
+
       res.status(200).json(result);
     } catch (error) {
       console.error('Error in getGameById controller:', error);
-      
+
       if (error.message === 'Game not found') {
         res.status(404).json({
           success: false,
@@ -74,11 +74,11 @@ export class GamesController {
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object
    */
-  async getLiveGames(req, res) {
+  async getLiveGames (req, res) {
     try {
       const filters = req.query;
       const result = await this.gamesService.getLiveGames(filters);
-      
+
       res.status(200).json(result);
     } catch (error) {
       console.error('Error in getLiveGames controller:', error);
@@ -95,11 +95,11 @@ export class GamesController {
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object
    */
-  async getGamesByDateRange(req, res) {
+  async getGamesByDateRange (req, res) {
     try {
       const { startDate, endDate } = req.query;
       const filters = req.query;
-      
+
       if (!startDate || !endDate) {
         return res.status(400).json({
           success: false,
@@ -109,11 +109,11 @@ export class GamesController {
       }
 
       const result = await this.gamesService.getGamesByDateRange(startDate, endDate, filters);
-      
+
       res.status(200).json(result);
     } catch (error) {
       console.error('Error in getGamesByDateRange controller:', error);
-      
+
       if (error.message.includes('Start date must be before')) {
         res.status(400).json({
           success: false,
@@ -135,16 +135,16 @@ export class GamesController {
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object
    */
-  async getGamesByTeam(req, res) {
+  async getGamesByTeam (req, res) {
     try {
       const { teamName } = req.params;
       const filters = req.query;
       const result = await this.gamesService.getGamesByTeam(teamName, filters);
-      
+
       res.status(200).json(result);
     } catch (error) {
       console.error('Error in getGamesByTeam controller:', error);
-      
+
       if (error.message === 'Team name is required') {
         res.status(400).json({
           success: false,
@@ -166,16 +166,16 @@ export class GamesController {
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object
    */
-  async createGame(req, res) {
+  async createGame (req, res) {
     try {
       const gameData = req.body;
       const result = await this.gamesService.createGame(gameData);
-      
+
       res.status(201).json(result);
     } catch (error) {
       console.error('Error in createGame controller:', error);
-      
-      if (error.message.includes('Missing required field') || 
+
+      if (error.message.includes('Missing required field') ||
           error.message.includes('Invalid date format') ||
           error.message.includes('Invalid status value') ||
           error.message.includes('Invalid sport') ||
@@ -200,16 +200,16 @@ export class GamesController {
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object
    */
-  async updateGame(req, res) {
+  async updateGame (req, res) {
     try {
       const { id } = req.params;
       const updateData = req.body;
       const result = await this.gamesService.updateGame(id, updateData);
-      
+
       res.status(200).json(result);
     } catch (error) {
       console.error('Error in updateGame controller:', error);
-      
+
       if (error.message === 'Game ID is required') {
         res.status(400).json({
           success: false,
@@ -245,15 +245,15 @@ export class GamesController {
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object
    */
-  async deleteGame(req, res) {
+  async deleteGame (req, res) {
     try {
       const { id } = req.params;
       const result = await this.gamesService.deleteGame(id);
-      
+
       res.status(200).json(result);
     } catch (error) {
       console.error('Error in deleteGame controller:', error);
-      
+
       if (error.message === 'Game ID is required') {
         res.status(400).json({
           success: false,
@@ -281,11 +281,11 @@ export class GamesController {
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object
    */
-  async getGameStatistics(req, res) {
+  async getGameStatistics (req, res) {
     try {
       const filters = req.query;
       const result = await this.gamesService.getGameStatistics(filters);
-      
+
       res.status(200).json(result);
     } catch (error) {
       console.error('Error in getGameStatistics controller:', error);

@@ -2,11 +2,11 @@ import express from 'express';
 
 /**
  * Health Check Routes
- * 
+ *
  * Provides health check endpoints for monitoring and load balancers.
  * These endpoints should be lightweight and fast.
  */
-export function createHealthRoutes(databaseAdapter) {
+export function createHealthRoutes (databaseAdapter) {
   const router = express.Router();
 
   // GET /health - General health check
@@ -70,7 +70,7 @@ export function createHealthRoutes(databaseAdapter) {
       }
 
       const isConnected = await databaseAdapter.isConnected();
-      
+
       if (!isConnected) {
         return res.status(503).json({
           status: 'not_ready',

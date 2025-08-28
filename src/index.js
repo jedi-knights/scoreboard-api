@@ -4,11 +4,11 @@ import { apiConfig, databaseConfig } from './config/index.js';
 
 /**
  * Main Application Entry Point
- * 
+ *
  * Initializes the database connection, creates the Express application,
  * and starts the HTTP server.
  */
-async function startServer() {
+async function startServer () {
   try {
     console.log('🚀 Starting Scoreboard API...');
     console.log(`Environment: ${apiConfig.environment}`);
@@ -36,7 +36,7 @@ async function startServer() {
     // Graceful shutdown handling
     const gracefulShutdown = async (signal) => {
       console.log(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
-      
+
       // Close server
       server.close(() => {
         console.log('🌐 HTTP server closed');

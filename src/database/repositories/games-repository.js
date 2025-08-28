@@ -2,13 +2,119 @@ import { BaseRepository } from './base-repository.js';
 
 /**
  * Games Repository
- * 
+ *
  * Implements the BaseRepository interface for games data access.
  * Provides games-specific query methods and business logic.
  */
 export class GamesRepository extends BaseRepository {
-  constructor(databaseAdapter) {
+  constructor (databaseAdapter) {
     super(databaseAdapter);
+  }
+
+  /**
+   * Build WHERE clause for date filter
+   * @param {string} date - Date filter
+   * @param {number} paramIndex - Current parameter index
+   * @returns {Object} Query fragment and new param index
+   */
+  _buildDateFilter (date, paramIndex) {
+    if (!date) return { fragment: '', paramIndex };
+    return {
+      fragment: ` AND date = $${paramIndex}`,
+      paramIndex: paramIndex + 1
+    };
+  }
+
+  /**
+   * Build WHERE clause for sport filter
+   * @param {string} sport - Sport filter
+   * @param {number} paramIndex - Current parameter index
+   * @returns {Object} Query fragment and new param index
+   */
+  _buildSportFilter (sport, paramIndex) {
+    if (!sport) return { fragment: '', paramIndex };
+    return {
+      fragment: ` AND sport = $${paramIndex}`,
+      paramIndex: paramIndex + 1
+    };
+  }
+
+  /**
+   * Build WHERE clause for status filter
+   * @param {string} status - Status filter
+   * @param {number} paramIndex - Current parameter index
+   * @returns {Object} Query fragment and new param index
+   */
+  _buildStatusFilter (status, paramIndex) {
+    if (!status) return { fragment: '', paramIndex };
+    return {
+      fragment: ` AND status = $${paramIndex}`,
+      paramIndex: paramIndex + 1
+    };
+  }
+
+  /**
+   * Build WHERE clause for conference filter
+   * @param {string} conference - Conference filter
+   * @param {number} paramIndex - Current parameter index
+   * @returns {Object} Query fragment and new param index
+   */
+  _buildConferenceFilter (conference, paramIndex) {
+    if (!conference) return { fragment: '', paramIndex };
+    return {
+      fragment: ` AND (home_team IN (SELECT name FROM teams WHERE conference = $${paramIndex}) OR away_team IN (SELECT name FROM teams WHERE conference = $${paramIndex}))`,
+      paramIndex: paramIndex + 1
+    };
+  }
+
+  /**
+   * Build WHERE clause for team filters
+   * @param {Object} filters - Team filters
+   * @param {number} paramIndex - Current parameter index
+   * @returns {Object} Query fragment and new param index
+   */
+  _buildTeamFilters (filters, paramIndex) {
+    let fragment = '';
+    let newParamIndex = paramIndex;
+
+    if (filters.homeTeam) {
+      fragment += ` AND home_team = $${newParamIndex++}`;
+    }
+
+    if (filters.awayTeam) {
+      fragment += ` AND away_team = $${newParamIndex++}`;
+    }
+
+    return { fragment, paramIndex: newParamIndex };
+  }
+
+  /**
+   * Build WHERE clause for data source filter
+   * @param {string} dataSource - Data source filter
+   * @param {number} paramIndex - Current parameter index
+   * @returns {Object} Query fragment and new param index
+   */
+  _buildDataSourceFilter (dataSource, paramIndex) {
+    if (!dataSource) return { fragment: '', paramIndex };
+    return {
+      fragment: ` AND data_source = $${paramIndex}`,
+      paramIndex: paramIndex + 1
+    };
+  }
+
+  /**
+   * Apply a single filter to the query
+   * @param {Object} filter - Filter result from builder method
+   * @param {string} value - Filter value
+   * @param {string} query - Current query
+   * @param {Array} params - Parameters array
+   * @param {number} _paramIndex - Current parameter index
+   * @returns {number} New parameter index
+   */
+  _applyFilter (filter, value, query, params, _paramIndex) {
+    query += filter.fragment;
+    if (filter.fragment) params.push(value);
+    return filter.paramIndex;
   }
 
   /**
@@ -17,54 +123,48 @@ export class GamesRepository extends BaseRepository {
    * @param {Object} options - Query options
    * @returns {Promise<Array>} Array of games
    */
-  async findAll(filters = {}, options = {}) {
+  async findAll (filters = {}, options = {}) {
     const { limit = 50, offset = 0, sortBy = 'date', sortOrder = 'DESC' } = options;
-    
+
     let query = 'SELECT * FROM games WHERE 1=1';
     const params = [];
     let paramIndex = 1;
 
-    // Apply filters
-    if (filters.date) {
-      query += ` AND date = $${paramIndex++}`;
-      params.push(filters.date);
-    }
+    // Apply filters sequentially
+    paramIndex = this._applyFilter(
+      this._buildDateFilter(filters.date, paramIndex),
+      filters.date, query, params, paramIndex
+    );
 
-    if (filters.sport) {
-      query += ` AND sport = $${paramIndex++}`;
-      params.push(filters.sport);
-    }
+    paramIndex = this._applyFilter(
+      this._buildSportFilter(filters.sport, paramIndex),
+      filters.sport, query, params, paramIndex
+    );
 
-    if (filters.status) {
-      query += ` AND status = $${paramIndex++}`;
-      params.push(filters.status);
-    }
+    paramIndex = this._applyFilter(
+      this._buildStatusFilter(filters.status, paramIndex),
+      filters.status, query, params, paramIndex
+    );
 
-    if (filters.conference) {
-      query += ` AND (home_team IN (SELECT name FROM teams WHERE conference = $${paramIndex}) OR away_team IN (SELECT name FROM teams WHERE conference = $${paramIndex}))`;
-      params.push(filters.conference);
-      paramIndex++;
-    }
+    paramIndex = this._applyFilter(
+      this._buildConferenceFilter(filters.conference, paramIndex),
+      filters.conference, query, params, paramIndex
+    );
 
-    if (filters.homeTeam) {
-      query += ` AND home_team = $${paramIndex++}`;
-      params.push(filters.homeTeam);
-    }
+    // Handle team filters separately due to multiple parameters
+    const teamFilters = this._buildTeamFilters(filters, paramIndex);
+    query += teamFilters.fragment;
+    if (filters.homeTeam) params.push(filters.homeTeam);
+    if (filters.awayTeam) params.push(filters.awayTeam);
+    paramIndex = teamFilters.paramIndex;
 
-    if (filters.awayTeam) {
-      query += ` AND away_team = $${paramIndex++}`;
-      params.push(filters.awayTeam);
-    }
+    paramIndex = this._applyFilter(
+      this._buildDataSourceFilter(filters.dataSource, paramIndex),
+      filters.dataSource, query, params, paramIndex
+    );
 
-    if (filters.dataSource) {
-      query += ` AND data_source = $${paramIndex++}`;
-      params.push(filters.dataSource);
-    }
-
-    // Apply sorting
+    // Apply sorting and pagination
     query += ` ORDER BY ${sortBy} ${sortOrder.toUpperCase()}`;
-
-    // Apply pagination
     query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
     params.push(limit, offset);
 
@@ -76,7 +176,7 @@ export class GamesRepository extends BaseRepository {
    * @param {string} gameId - Game identifier
    * @returns {Promise<Object|null>} Game or null if not found
    */
-  async findById(gameId) {
+  async findById (gameId) {
     const query = 'SELECT * FROM games WHERE game_id = ?';
     return this.executeQuerySingle(query, [gameId]);
   }
@@ -88,7 +188,7 @@ export class GamesRepository extends BaseRepository {
    * @param {Object} filters - Additional filters
    * @returns {Promise<Array>} Array of games
    */
-  async findByDateRange(startDate, endDate, filters = {}) {
+  async findByDateRange (startDate, endDate, filters = {}) {
     let query = 'SELECT * FROM games WHERE date BETWEEN ? AND ?';
     const params = [startDate, endDate];
 
@@ -112,7 +212,7 @@ export class GamesRepository extends BaseRepository {
    * @param {Object} filters - Additional filters
    * @returns {Promise<Array>} Array of live games
    */
-  async findLiveGames(filters = {}) {
+  async findLiveGames (filters = {}) {
     let query = 'SELECT * FROM games WHERE status = "in_progress"';
     const params = [];
 
@@ -137,7 +237,7 @@ export class GamesRepository extends BaseRepository {
    * @param {Object} filters - Additional filters
    * @returns {Promise<Array>} Array of games
    */
-  async findByTeam(teamName, filters = {}) {
+  async findByTeam (teamName, filters = {}) {
     let query = 'SELECT * FROM games WHERE (home_team = ? OR away_team = ?)';
     const params = [teamName, teamName];
 
@@ -162,19 +262,100 @@ export class GamesRepository extends BaseRepository {
   }
 
   /**
-   * Create a new game
-   * @param {Object} gameData - Game data
-   * @returns {Promise<Object>} Created game
+   * Validate required fields for game creation
+   * @param {Object} gameData - Game data to validate
+   * @throws {Error} If required fields are missing
    */
-  async create(gameData) {
+  _validateRequiredFields (gameData) {
     const requiredFields = ['game_id', 'date', 'home_team', 'away_team', 'sport', 'status', 'data_source'];
-    
-    // Validate required fields
+
     for (const field of requiredFields) {
       if (!gameData[field]) {
         throw new Error(`Missing required field: ${field}`);
       }
     }
+  }
+
+  /**
+   * Build core game parameters
+   * @param {Object} gameData - Game data
+   * @returns {Array} Core parameters array
+   */
+  _buildCoreGameParams (gameData) {
+    return [
+      gameData.game_id,
+      gameData.data_source,
+      gameData.league_name || null,
+      gameData.date,
+      gameData.home_team,
+      gameData.away_team,
+      gameData.sport
+    ];
+  }
+
+  /**
+   * Build score-related parameters
+   * @param {Object} gameData - Game data
+   * @returns {Array} Score parameters array
+   */
+  _buildScoreParams (gameData) {
+    return [
+      gameData.home_score || null,
+      gameData.away_score || null,
+      gameData.status,
+      gameData.current_period || null,
+      gameData.period_scores ? JSON.stringify(gameData.period_scores) : null
+    ];
+  }
+
+  /**
+   * Build location-related parameters
+   * @param {Object} gameData - Game data
+   * @returns {Array} Location parameters array
+   */
+  _buildLocationParams (gameData) {
+    return [
+      gameData.venue || null,
+      gameData.city || null,
+      gameData.state || null,
+      gameData.country || null,
+      gameData.timezone || null
+    ];
+  }
+
+  /**
+   * Build additional game parameters
+   * @param {Object} gameData - Game data
+   * @returns {Array} Additional parameters array
+   */
+  _buildAdditionalParams (gameData) {
+    return [
+      gameData.broadcast_info || null,
+      gameData.notes || null
+    ];
+  }
+
+  /**
+   * Build parameters array for game insertion
+   * @param {Object} gameData - Game data
+   * @returns {Array} Parameters array for SQL query
+   */
+  _buildGameParams (gameData) {
+    return [
+      ...this._buildCoreGameParams(gameData),
+      ...this._buildScoreParams(gameData),
+      ...this._buildLocationParams(gameData),
+      ...this._buildAdditionalParams(gameData)
+    ];
+  }
+
+  /**
+   * Create a new game
+   * @param {Object} gameData - Game data
+   * @returns {Promise<Object>} Created game
+   */
+  async create (gameData) {
+    this._validateRequiredFields(gameData);
 
     const query = `
       INSERT INTO games (
@@ -184,31 +365,9 @@ export class GamesRepository extends BaseRepository {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    const params = [
-      gameData.game_id,
-      gameData.data_source,
-      gameData.league_name || null,
-      gameData.date,
-      gameData.home_team,
-      gameData.away_team,
-      gameData.sport,
-      gameData.home_score || null,
-      gameData.away_score || null,
-      gameData.status,
-      gameData.current_period || null,
-      gameData.period_scores ? JSON.stringify(gameData.period_scores) : null,
-      gameData.venue || null,
-      gameData.city || null,
-      gameData.state || null,
-      gameData.country || null,
-      gameData.timezone || null,
-      gameData.broadcast_info || null,
-      gameData.notes || null
-    ];
+    const params = this._buildGameParams(gameData);
+    await this.executeQueryRun(query, params);
 
-    const result = await this.executeQueryRun(query, params);
-    
-    // Return the created game
     return this.findById(gameData.game_id);
   }
 
@@ -218,7 +377,7 @@ export class GamesRepository extends BaseRepository {
    * @param {Object} updateData - Update data
    * @returns {Promise<Object|null>} Updated game or null if not found
    */
-  async update(gameId, updateData) {
+  async update (gameId, updateData) {
     // Check if game exists
     const existingGame = await this.findById(gameId);
     if (!existingGame) {
@@ -233,7 +392,7 @@ export class GamesRepository extends BaseRepository {
     Object.keys(updateData).forEach(key => {
       if (key !== 'game_id' && key !== 'id' && key !== 'created_at') {
         updateFields.push(`${key} = $${paramIndex++}`);
-        
+
         // Handle special fields
         if (key === 'period_scores' && updateData[key]) {
           params.push(JSON.stringify(updateData[key]));
@@ -249,14 +408,14 @@ export class GamesRepository extends BaseRepository {
 
     // Add updated_at timestamp
     updateFields.push('updated_at = CURRENT_TIMESTAMP');
-    
+
     // Add game_id to params for WHERE clause
     params.push(gameId);
 
     const query = `UPDATE games SET ${updateFields.join(', ')} WHERE game_id = $${paramIndex}`;
-    
+
     await this.executeQueryRun(query, params);
-    
+
     // Return the updated game
     return this.findById(gameId);
   }
@@ -266,7 +425,7 @@ export class GamesRepository extends BaseRepository {
    * @param {string} gameId - Game identifier
    * @returns {Promise<boolean>} True if deleted, false if not found
    */
-  async delete(gameId) {
+  async delete (gameId) {
     const query = 'DELETE FROM games WHERE game_id = ?';
     const result = await this.executeQueryRun(query, [gameId]);
     return result.changes > 0;
@@ -277,7 +436,7 @@ export class GamesRepository extends BaseRepository {
    * @param {Object} filters - Filter criteria
    * @returns {Promise<number>} Count of matching games
    */
-  async count(filters = {}) {
+  async count (filters = {}) {
     let query = 'SELECT COUNT(*) as count FROM games WHERE 1=1';
     const params = [];
     let paramIndex = 1;
@@ -313,7 +472,7 @@ export class GamesRepository extends BaseRepository {
    * @param {Object} criteria - Search criteria
    * @returns {Promise<boolean>} True if game exists
    */
-  async exists(criteria) {
+  async exists (criteria) {
     if (criteria.game_id) {
       const game = await this.findById(criteria.game_id);
       return !!game;
@@ -337,7 +496,7 @@ export class GamesRepository extends BaseRepository {
    * @param {Object} filters - Filter criteria
    * @returns {Promise<Object>} Game statistics
    */
-  async getStatistics(filters = {}) {
+  async getStatistics (filters = {}) {
     let query = 'SELECT ';
     const params = [];
     let paramIndex = 1;

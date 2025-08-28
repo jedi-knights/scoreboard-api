@@ -1,11 +1,11 @@
 /**
  * Base Database Adapter Interface
- * 
+ *
  * This abstract class defines the contract that all database adapters must implement.
  * It follows the Strategy pattern to allow easy switching between different database backends.
  */
 export class BaseDatabaseAdapter {
-  constructor(config) {
+  constructor (config) {
     if (this.constructor === BaseDatabaseAdapter) {
       throw new Error('BaseDatabaseAdapter is an abstract class and cannot be instantiated directly');
     }
@@ -16,7 +16,7 @@ export class BaseDatabaseAdapter {
    * Initialize the database connection
    * @returns {Promise<void>}
    */
-  async connect() {
+  async connect () {
     throw new Error('connect() method must be implemented by subclass');
   }
 
@@ -24,7 +24,7 @@ export class BaseDatabaseAdapter {
    * Close the database connection
    * @returns {Promise<void>}
    */
-  async disconnect() {
+  async disconnect () {
     throw new Error('disconnect() method must be implemented by subclass');
   }
 
@@ -32,17 +32,17 @@ export class BaseDatabaseAdapter {
    * Check if the database is connected
    * @returns {Promise<boolean>}
    */
-  async isConnected() {
+  async isConnected () {
     throw new Error('isConnected() method must be implemented by subclass');
   }
 
   /**
    * Execute a raw query
    * @param {string} query - The query to execute
-   * @param {Array} params - Query parameters
+   * @param {Array} _params - Query parameters
    * @returns {Promise<any>}
    */
-  async query(query, params = []) {
+  async query (query, _params = []) {
     throw new Error('query() method must be implemented by subclass');
   }
 
@@ -50,25 +50,25 @@ export class BaseDatabaseAdapter {
    * Begin a transaction
    * @returns {Promise<Object>} Transaction object
    */
-  async beginTransaction() {
+  async beginTransaction () {
     throw new Error('beginTransaction() method must be implemented by subclass');
   }
 
   /**
    * Commit a transaction
-   * @param {Object} transaction - Transaction object
+   * @param {Object} _transaction - Transaction object
    * @returns {Promise<void>}
    */
-  async commitTransaction(transaction) {
+  async commitTransaction (_transaction) {
     throw new Error('commitTransaction() method must be implemented by subclass');
   }
 
   /**
    * Rollback a transaction
-   * @param {Object} transaction - Transaction object
+   * @param {Object} _transaction - Transaction object
    * @returns {Promise<void>}
    */
-  async rollbackTransaction(transaction) {
+  async rollbackTransaction (_transaction) {
     throw new Error('rollbackTransaction() method must be implemented by subclass');
   }
 
@@ -76,7 +76,7 @@ export class BaseDatabaseAdapter {
    * Get database health status
    * @returns {Promise<Object>} Health status object
    */
-  async getHealthStatus() {
+  async getHealthStatus () {
     throw new Error('getHealthStatus() method must be implemented by subclass');
   }
 
@@ -84,7 +84,7 @@ export class BaseDatabaseAdapter {
    * Create database tables if they don't exist
    * @returns {Promise<void>}
    */
-  async createTables() {
+  async createTables () {
     throw new Error('createTables() method must be implemented by subclass');
   }
 
@@ -92,7 +92,7 @@ export class BaseDatabaseAdapter {
    * Drop all database tables
    * @returns {Promise<void>}
    */
-  async dropTables() {
+  async dropTables () {
     throw new Error('dropTables() method must be implemented by subclass');
   }
 }

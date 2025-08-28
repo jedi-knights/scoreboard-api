@@ -12,22 +12,22 @@ import { createHealthRoutes } from './routes/health-routes.js';
 
 /**
  * Express Application
- * 
+ *
  * Main application setup with middleware, routes, and error handling.
  * Follows Express.js best practices and security guidelines.
  */
-export function createApp(databaseAdapter) {
+export function createApp (databaseAdapter) {
   const app = express();
 
   // Security middleware
   app.use(helmet({
     contentSecurityPolicy: {
       directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https:"],
-      },
+        defaultSrc: ['\'self\''],
+        styleSrc: ['\'self\'', '\'unsafe-inline\''],
+        scriptSrc: ['\'self\''],
+        imgSrc: ['\'self\'', 'data:', 'https:']
+      }
     },
     hsts: {
       maxAge: 31536000,
@@ -112,7 +112,7 @@ export function createApp(databaseAdapter) {
   });
 
   // Global error handler
-  app.use((error, req, res, next) => {
+  app.use((error, req, res, _next) => {
     console.error('Global error handler:', error);
 
     // Handle specific error types

@@ -66,7 +66,10 @@ export default [
       'space-infix-ops': 'error',
       'eol-last': 'error',
       'no-trailing-spaces': 'error',
-      'no-multiple-empty-lines': ['error', { max: 2, maxEOF: 1 }]
+      'no-multiple-empty-lines': ['error', { max: 2, maxEOF: 1 }],
+      
+      // Complexity rules
+      'complexity': ['error', { max: 10 }]
     }
   },
   {

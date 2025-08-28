@@ -6,16 +6,16 @@ import fs from 'fs';
 
 /**
  * SQLite Database Adapter
- * 
+ *
  * Implements the BaseDatabaseAdapter interface for SQLite database operations.
  * Uses the sqlite3 package for database connectivity.
  */
 export class SQLiteAdapter extends BaseDatabaseAdapter {
-  constructor(config) {
+  constructor (config) {
     super(config);
     this.db = null;
     this.connectionPath = config.databasePath;
-    
+
     // Ensure data directory exists
     const dataDir = path.dirname(this.connectionPath);
     if (!fs.existsSync(dataDir)) {
@@ -27,7 +27,7 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
    * Initialize the SQLite database connection
    * @returns {Promise<void>}
    */
-  async connect() {
+  async connect () {
     try {
       this.db = await open({
         filename: this.connectionPath,
@@ -37,10 +37,10 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
 
       // Enable foreign keys
       await this.db.exec('PRAGMA foreign_keys = ON');
-      
+
       // Create tables if they don't exist
       await this.createTables();
-      
+
       console.log(`SQLite database connected: ${this.connectionPath}`);
     } catch (error) {
       console.error('Failed to connect to SQLite database:', error);
@@ -52,7 +52,7 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
    * Close the database connection
    * @returns {Promise<void>}
    */
-  async disconnect() {
+  async disconnect () {
     if (this.db) {
       await this.db.close();
       this.db = null;
@@ -64,12 +64,12 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
    * Check if the database is connected
    * @returns {Promise<boolean>}
    */
-  async isConnected() {
+  async isConnected () {
     try {
       if (!this.db) return false;
       await this.db.get('SELECT 1');
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -80,7 +80,7 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
    * @param {Array} params - Query parameters
    * @returns {Promise<any>}
    */
-  async query(query, params = []) {
+  async query (query, params = []) {
     if (!this.db) {
       throw new Error('Database not connected');
     }
@@ -100,7 +100,7 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
    * @param {Array} params - Query parameters
    * @returns {Promise<Object|null>}
    */
-  async get(query, params = []) {
+  async get (query, params = []) {
     if (!this.db) {
       throw new Error('Database not connected');
     }
@@ -120,7 +120,7 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
    * @param {Array} params - Query parameters
    * @returns {Promise<Object>}
    */
-  async run(query, params = []) {
+  async run (query, params = []) {
     if (!this.db) {
       throw new Error('Database not connected');
     }
@@ -138,7 +138,7 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
    * Begin a transaction
    * @returns {Promise<Object>} Transaction object
    */
-  async beginTransaction() {
+  async beginTransaction () {
     if (!this.db) {
       throw new Error('Database not connected');
     }
@@ -157,7 +157,7 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
    * @param {Object} transaction - Transaction object
    * @returns {Promise<void>}
    */
-  async commitTransaction(transaction) {
+  async commitTransaction (transaction) {
     if (!transaction || transaction.committed) {
       throw new Error('Invalid transaction state');
     }
@@ -176,7 +176,7 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
    * @param {Object} transaction - Transaction object
    * @returns {Promise<void>}
    */
-  async rollbackTransaction(transaction) {
+  async rollbackTransaction (transaction) {
     if (!transaction || transaction.committed) {
       return; // Already committed, nothing to rollback
     }
@@ -193,7 +193,7 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
    * Get database health status
    * @returns {Promise<Object>} Health status object
    */
-  async getHealthStatus() {
+  async getHealthStatus () {
     try {
       const startTime = Date.now();
       await this.db.get('SELECT 1');
@@ -221,7 +221,7 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
    * Create database tables if they don't exist
    * @returns {Promise<void>}
    */
-  async createTables() {
+  async createTables () {
     const createTablesSQL = `
       -- Games table
       CREATE TABLE IF NOT EXISTS games (
@@ -324,7 +324,7 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
    * Drop all database tables
    * @returns {Promise<void>}
    */
-  async dropTables() {
+  async dropTables () {
     const dropTablesSQL = `
       DROP TABLE IF EXISTS schedules;
       DROP TABLE IF EXISTS collections;

@@ -3,11 +3,11 @@ import { GamesController } from '../controllers/games-controller.js';
 
 /**
  * Games Routes
- * 
+ *
  * Defines all games-related API endpoints.
  * Implements RESTful routing patterns.
  */
-export function createGamesRoutes(databaseAdapter) {
+export function createGamesRoutes (databaseAdapter) {
   const router = express.Router();
   const gamesController = new GamesController(databaseAdapter);
 

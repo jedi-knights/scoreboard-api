@@ -2,12 +2,12 @@ import { GamesRepository } from '../database/repositories/games-repository.js';
 
 /**
  * Games Service
- * 
+ *
  * Service layer for games business logic.
  * Implements the Service Layer pattern to separate business logic from data access.
  */
 export class GamesService {
-  constructor(databaseAdapter) {
+  constructor (databaseAdapter) {
     this.gamesRepository = new GamesRepository(databaseAdapter);
   }
 
@@ -17,7 +17,7 @@ export class GamesService {
    * @param {Object} options - Query options
    * @returns {Promise<Object>} Games data with metadata
    */
-  async getGames(filters = {}, options = {}) {
+  async getGames (filters = {}, options = {}) {
     try {
       // Validate and sanitize filters
       const sanitizedFilters = this.sanitizeFilters(filters);
@@ -58,14 +58,14 @@ export class GamesService {
    * @param {string} gameId - Game identifier
    * @returns {Promise<Object>} Game data
    */
-  async getGameById(gameId) {
+  async getGameById (gameId) {
     try {
       if (!gameId) {
         throw new Error('Game ID is required');
       }
 
       const game = await this.gamesRepository.findById(gameId);
-      
+
       if (!game) {
         throw new Error('Game not found');
       }
@@ -85,7 +85,7 @@ export class GamesService {
    * @param {Object} filters - Additional filters
    * @returns {Promise<Object>} Live games data
    */
-  async getLiveGames(filters = {}) {
+  async getLiveGames (filters = {}) {
     try {
       const sanitizedFilters = this.sanitizeFilters(filters);
       const games = await this.gamesRepository.findLiveGames(sanitizedFilters);
@@ -111,7 +111,7 @@ export class GamesService {
    * @param {Object} filters - Additional filters
    * @returns {Promise<Object>} Games data
    */
-  async getGamesByDateRange(startDate, endDate, filters = {}) {
+  async getGamesByDateRange (startDate, endDate, filters = {}) {
     try {
       // Validate dates
       if (!startDate || !endDate) {
@@ -147,7 +147,7 @@ export class GamesService {
    * @param {Object} filters - Additional filters
    * @returns {Promise<Object>} Games data
    */
-  async getGamesByTeam(teamName, filters = {}) {
+  async getGamesByTeam (teamName, filters = {}) {
     try {
       if (!teamName) {
         throw new Error('Team name is required');
@@ -175,7 +175,7 @@ export class GamesService {
    * @param {Object} gameData - Game data
    * @returns {Promise<Object>} Created game data
    */
-  async createGame(gameData) {
+  async createGame (gameData) {
     try {
       // Validate game data
       this.validateGameData(gameData);
@@ -206,7 +206,7 @@ export class GamesService {
    * @param {Object} updateData - Update data
    * @returns {Promise<Object>} Updated game data
    */
-  async updateGame(gameId, updateData) {
+  async updateGame (gameId, updateData) {
     try {
       if (!gameId) {
         throw new Error('Game ID is required');
@@ -217,7 +217,7 @@ export class GamesService {
 
       // Update the game
       const updatedGame = await this.gamesRepository.update(gameId, updateData);
-      
+
       if (!updatedGame) {
         throw new Error('Game not found');
       }
@@ -238,7 +238,7 @@ export class GamesService {
    * @param {string} gameId - Game identifier
    * @returns {Promise<Object>} Deletion result
    */
-  async deleteGame(gameId) {
+  async deleteGame (gameId) {
     try {
       if (!gameId) {
         throw new Error('Game ID is required');
@@ -272,7 +272,7 @@ export class GamesService {
    * @param {Object} filters - Filter criteria
    * @returns {Promise<Object>} Statistics data
    */
-  async getGameStatistics(filters = {}) {
+  async getGameStatistics (filters = {}) {
     try {
       const sanitizedFilters = this.sanitizeFilters(filters);
       const statistics = await this.gamesRepository.getStatistics(sanitizedFilters);
@@ -292,45 +292,109 @@ export class GamesService {
   }
 
   /**
+   * Validate and sanitize a string filter
+   * @param {string} value - Raw value
+   * @param {boolean} toLowerCase - Whether to convert to lowercase
+   * @returns {string|null} Sanitized value or null if invalid
+   */
+  _sanitizeStringFilter (value, toLowerCase = false) {
+    if (value && typeof value === 'string') {
+      const sanitized = value.trim();
+      return toLowerCase ? sanitized.toLowerCase() : sanitized;
+    }
+    return null;
+  }
+
+  /**
+   * Validate status filter
+   * @param {string} status - Raw status
+   * @returns {string|null} Valid status or null
+   */
+  _validateStatus (status) {
+    const validStatuses = ['scheduled', 'in_progress', 'completed', 'final', 'postponed', 'cancelled'];
+    return validStatuses.includes(status) ? status : null;
+  }
+
+  /**
    * Sanitize and validate filters
    * @param {Object} filters - Raw filters
    * @returns {Object} Sanitized filters
    */
-  sanitizeFilters(filters) {
+  sanitizeFilters (filters) {
     const sanitized = {};
 
-    if (filters.date && typeof filters.date === 'string') {
-      sanitized.date = filters.date.trim();
-    }
+    // Process each filter type
+    const dateFilter = this._sanitizeStringFilter(filters.date);
+    if (dateFilter) sanitized.date = dateFilter;
 
-    if (filters.sport && typeof filters.sport === 'string') {
-      sanitized.sport = filters.sport.trim().toLowerCase();
-    }
+    const sportFilter = this._sanitizeStringFilter(filters.sport, true);
+    if (sportFilter) sanitized.sport = sportFilter;
 
-    if (filters.status && typeof filters.status === 'string') {
-      const validStatuses = ['scheduled', 'in_progress', 'completed', 'final', 'postponed', 'cancelled'];
-      if (validStatuses.includes(filters.status)) {
-        sanitized.status = filters.status;
-      }
-    }
+    const statusFilter = this._validateStatus(filters.status);
+    if (statusFilter) sanitized.status = statusFilter;
 
-    if (filters.conference && typeof filters.conference === 'string') {
-      sanitized.conference = filters.conference.trim();
-    }
+    const conferenceFilter = this._sanitizeStringFilter(filters.conference);
+    if (conferenceFilter) sanitized.conference = conferenceFilter;
 
-    if (filters.homeTeam && typeof filters.homeTeam === 'string') {
-      sanitized.homeTeam = filters.homeTeam.trim();
-    }
+    const homeTeamFilter = this._sanitizeStringFilter(filters.homeTeam);
+    if (homeTeamFilter) sanitized.homeTeam = homeTeamFilter;
 
-    if (filters.awayTeam && typeof filters.awayTeam === 'string') {
-      sanitized.awayTeam = filters.awayTeam.trim();
-    }
+    const awayTeamFilter = this._sanitizeStringFilter(filters.awayTeam);
+    if (awayTeamFilter) sanitized.awayTeam = awayTeamFilter;
 
-    if (filters.dataSource && typeof filters.dataSource === 'string') {
-      sanitized.dataSource = filters.dataSource.trim().toLowerCase();
-    }
+    const dataSourceFilter = this._sanitizeStringFilter(filters.dataSource, true);
+    if (dataSourceFilter) sanitized.dataSource = dataSourceFilter;
 
     return sanitized;
+  }
+
+  /**
+   * Validate and sanitize limit option
+   * @param {any} limit - Raw limit value
+   * @returns {number} Sanitized limit
+   */
+  _sanitizeLimit (limit) {
+    if (limit && !isNaN(limit)) {
+      return Math.min(Math.max(parseInt(limit), 1), 100);
+    }
+    return 50;
+  }
+
+  /**
+   * Validate and sanitize offset option
+   * @param {any} offset - Raw offset value
+   * @returns {number} Sanitized offset
+   */
+  _sanitizeOffset (offset) {
+    if (offset && !isNaN(offset)) {
+      return Math.max(parseInt(offset), 0);
+    }
+    return 0;
+  }
+
+  /**
+   * Validate and sanitize sort by option
+   * @param {string} sortBy - Raw sort by value
+   * @returns {string} Valid sort field
+   */
+  _sanitizeSortBy (sortBy) {
+    const validSortFields = ['date', 'home_team', 'away_team', 'sport', 'status', 'created_at'];
+    if (sortBy && typeof sortBy === 'string' && validSortFields.includes(sortBy)) {
+      return sortBy;
+    }
+    return 'date';
+  }
+
+  /**
+   * Validate and sanitize sort order option
+   * @param {string} sortOrder - Raw sort order value
+   * @returns {string} Valid sort order
+   */
+  _sanitizeSortOrder (sortOrder) {
+    if (sortOrder && typeof sortOrder === 'string') {
+      return sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+    }
+    return 'DESC';
   }
 
   /**
@@ -338,48 +402,22 @@ export class GamesService {
    * @param {Object} options - Raw options
    * @returns {Object} Sanitized options
    */
-  sanitizeOptions(options) {
-    const sanitized = {};
-
-    if (options.limit && !isNaN(options.limit)) {
-      sanitized.limit = Math.min(Math.max(parseInt(options.limit), 1), 100);
-    } else {
-      sanitized.limit = 50;
-    }
-
-    if (options.offset && !isNaN(options.offset)) {
-      sanitized.offset = Math.max(parseInt(options.offset), 0);
-    } else {
-      sanitized.offset = 0;
-    }
-
-    if (options.sortBy && typeof options.sortBy === 'string') {
-      const validSortFields = ['date', 'home_team', 'away_team', 'sport', 'status', 'created_at'];
-      if (validSortFields.includes(options.sortBy)) {
-        sanitized.sortBy = options.sortBy;
-      } else {
-        sanitized.sortBy = 'date';
-      }
-    } else {
-      sanitized.sortBy = 'date';
-    }
-
-    if (options.sortOrder && typeof options.sortOrder === 'string') {
-      sanitized.sortOrder = options.sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-    } else {
-      sanitized.sortOrder = 'DESC';
-    }
-
-    return sanitized;
+  sanitizeOptions (options) {
+    return {
+      limit: this._sanitizeLimit(options.limit),
+      offset: this._sanitizeOffset(options.offset),
+      sortBy: this._sanitizeSortBy(options.sortBy),
+      sortOrder: this._sanitizeSortOrder(options.sortOrder)
+    };
   }
 
   /**
    * Validate game data for creation
    * @param {Object} gameData - Game data to validate
    */
-  validateGameData(gameData) {
+  validateGameData (gameData) {
     const requiredFields = ['game_id', 'date', 'home_team', 'away_team', 'sport', 'status', 'data_source'];
-    
+
     for (const field of requiredFields) {
       if (!gameData[field]) {
         throw new Error(`Missing required field: ${field}`);
@@ -407,7 +445,7 @@ export class GamesService {
    * Validate game update data
    * @param {Object} updateData - Update data to validate
    */
-  validateGameUpdateData(updateData) {
+  validateGameUpdateData (updateData) {
     if (updateData.date && !/^\d{4}-\d{2}-\d{2}$/.test(updateData.date)) {
       throw new Error('Invalid date format. Use YYYY-MM-DD');
     }
