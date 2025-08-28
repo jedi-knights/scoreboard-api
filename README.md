@@ -20,6 +20,62 @@ This API follows a clean, layered architecture:
 - **Service Layer Pattern**: Separates business logic from controllers
 - **MVC Pattern**: Organizes code into Model-View-Controller layers
 
+### Code Quality Standards
+
+The project maintains high code quality through automated tools and best practices:
+
+#### Cyclomatic Complexity
+
+- **Maximum Threshold**: 10 (enforced by ESLint)
+- **Purpose**: Ensures methods remain maintainable and testable
+- **Benefits**: 
+  - Easier to understand and debug
+  - Simpler to unit test
+  - Reduced cognitive load for developers
+  - Better code maintainability
+
+#### Code Quality Tools
+
+- **ESLint**: Code linting and style enforcement
+- **Prettier**: Code formatting (via ESLint rules)
+- **Jest**: Testing framework with coverage reporting
+- **Testcontainers**: Integration testing with real databases
+
+#### Quality Gates
+
+- ✅ **Linting**: All ESLint rules must pass
+- ✅ **Complexity**: Methods under 10 cyclomatic complexity
+- ✅ **Coverage**: Minimum 80% test coverage
+- ✅ **Tests**: All tests must pass
+- ✅ **Security**: No known vulnerabilities
+
+#### Recent Quality Improvements
+
+The project recently underwent a comprehensive refactoring to improve code quality and maintainability:
+
+##### Cyclomatic Complexity Refactoring
+
+**Methods Refactored:**
+- **`validateConfig`** (was 14, now < 10): Split into focused validation methods
+- **`sanitizeFilters`** (was 16, now < 10): Extracted string and status validation helpers
+- **`sanitizeOptions`** (was 11, now < 10): Separated into limit, offset, sort, and order methods
+- **`findAll`** (was 14, now < 10): Broke down into filter-specific builder methods
+- **`create`** (was 15, now < 10): Split parameter building into focused functions
+- **`_buildGameParams`** (was 13, now < 10): Composed from smaller, focused helpers
+
+**Refactoring Benefits:**
+- **Maintainability**: Each method has a single responsibility
+- **Readability**: Logic is easier to understand and follow
+- **Testability**: Smaller methods are easier to unit test
+- **Reusability**: Helper methods can be reused elsewhere
+- **Performance**: Reduced nested conditionals and early returns
+
+**Design Patterns Applied:**
+- **Extract Method**: Breaking complex methods into smaller ones
+- **Template Method**: Common patterns in filter building
+- **Strategy**: Different validation strategies for different data types
+- **Composition**: Building complex objects from simpler parts
+
 ## 🚀 Features
 
 - **Multi-Database Support**: SQLite, PostgreSQL, and DynamoDB
@@ -33,6 +89,7 @@ This API follows a clean, layered architecture:
 - **Validation**: Input validation with Joi
 - **Docker Support**: Containerized deployment
 - **Testing**: Comprehensive testing with Jest and Testcontainers
+- **CI/CD**: Automated workflows with GitHub Actions
 
 ## 📋 Prerequisites
 
@@ -341,6 +398,52 @@ When adding new database backends:
 3. Add configuration options
 4. Update Docker Compose configuration
 
+## 🚀 CI/CD & Deployment
+
+### GitHub Actions Workflows
+
+The project includes comprehensive CI/CD workflows that automatically validate code quality and run tests:
+
+#### Main CI Workflow (`ci.yml`)
+- **Triggers**: Push to main/develop, PRs, manual dispatch
+- **Validation**: Linting, unit tests, integration tests, security audit
+- **Matrix Testing**: Node.js 18/20, multiple OS, multiple databases
+- **Quality Gates**: 80% coverage, complexity < 10, no security issues
+- **Docker**: Build and test container images
+- **Performance**: API response time validation
+
+#### Quick PR Check (`pr-check.yml`)
+- **Purpose**: Fast validation for pull requests
+- **Timeout**: 10 minutes maximum
+- **Focus**: Essential checks only (linting, unit tests, coverage)
+- **Benefits**: Quick feedback, prevents obvious issues
+
+#### Security Workflow (`security.yml`)
+- **Schedule**: Daily at 2 AM UTC
+- **Features**: Dependency updates, security scanning, CodeQL analysis
+- **Container Security**: Trivy vulnerability scanner
+- **Automation**: Issue creation for security updates
+
+#### Workflow Benefits
+
+- **Fast Feedback Loop**: Quick PR validation → comprehensive testing
+- **Progressive Validation**: Basic → integration → security → performance
+- **Fail-Fast Approach**: Stop on first failure to save resources
+- **Matrix Testing**: Multiple environments and configurations
+- **Automated Reporting**: PR comments and coverage reports
+
+### Quality Gates
+
+Your code must pass all of these to be considered valid:
+- ✅ **All tests pass** (unit + integration)
+- ✅ **80% test coverage** minimum
+- ✅ **No security vulnerabilities**
+- ✅ **Linting passes** without errors
+- ✅ **Docker builds** successfully
+- ✅ **API endpoints** respond correctly
+- ✅ **Performance** within acceptable limits
+- ✅ **Complexity** under 10 threshold
+
 ## 🚀 Deployment
 
 ### Production Considerations
@@ -378,6 +481,62 @@ When adding new database backends:
 3. Maintain code quality standards
 4. Update documentation
 5. Follow commit message conventions
+
+### Conventional Commits
+
+This project follows the [Angular Conventional Commits](https://www.conventionalcommits.org/) specification for commit messages. This ensures consistent commit history and enables automated tools for versioning and changelog generation.
+
+#### Commit Message Format
+
+```
+type(scope): description
+
+[optional body]
+
+[optional footer(s)]
+```
+
+#### Commit Types
+
+- **`feat:`** - New features
+- **`fix:`** - Bug fixes
+- **`docs:`** - Documentation changes
+- **`style:`** - Code style changes (formatting, etc.)
+- **`refactor:`** - Code refactoring
+- **`test:`** - Adding or updating tests
+- **`chore:`** - Maintenance tasks
+- **`perf:`** - Performance improvements
+- **`ci:`** - CI/CD changes
+- **`build:`** - Build system changes
+
+#### Examples
+
+```bash
+# Feature
+git commit -m "feat(auth): add JWT authentication middleware"
+
+# Bug fix
+git commit -m "fix(database): resolve connection timeout issues"
+
+# Refactoring
+git commit -m "refactor(services): reduce method complexity"
+
+# Documentation
+git commit -m "docs(api): update endpoint documentation"
+
+# Breaking change
+git commit -m "feat(api): change response format
+
+BREAKING CHANGE: API responses now return data in 'result' field"
+```
+
+#### Benefits
+
+- **Automated Versioning**: Semantic versioning based on commit types
+- **Changelog Generation**: Automatic creation of detailed release notes
+- **CI/CD Integration**: Trigger appropriate workflows based on commit type
+- **Team Communication**: Clear understanding of what type of change was made
+- **Release Management**: Easy identification of breaking changes
 
 ### Testing Guidelines
 
