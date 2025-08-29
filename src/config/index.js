@@ -52,7 +52,7 @@ const apiConfig = {
   environment: process.env.NODE_ENV || 'development',
   cors: {
     origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-    credentials: process.env.CORS_CREDENTIALS === 'true'
+    credentials: process.env.CORS_CREDENTIALS === 'false' ? false : true
   },
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000, // 15 minutes
