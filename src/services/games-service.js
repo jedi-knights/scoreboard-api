@@ -300,6 +300,10 @@ export class GamesService {
   _sanitizeStringFilter (value, toLowerCase = false) {
     if (value && typeof value === 'string') {
       const sanitized = value.trim();
+      // Return null for empty strings after trimming
+      if (sanitized === '') {
+        return null;
+      }
       return toLowerCase ? sanitized.toLowerCase() : sanitized;
     }
     return null;
@@ -462,7 +466,7 @@ export class GamesService {
       }
     }
 
-    if (updateData.sport && (updateData.sport.length < 1 || updateData.sport.length > 50)) {
+    if (updateData.sport !== undefined && updateData.sport !== null && (updateData.sport.length < 1 || updateData.sport.length > 50)) {
       throw new Error('Sport name must be between 1 and 50 characters');
     }
   }
