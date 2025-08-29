@@ -89,6 +89,7 @@ describe('Configuration Module', () => {
       expect(apiConfig.version).toBe('v1');
       expect(apiConfig.environment).toBe('test');
       expect(apiConfig.cors.origin).toBe('http://localhost:3000');
+      // .env file is loaded, so CORS_CREDENTIALS=true
       expect(apiConfig.cors.credentials).toBe(true);
       expect(apiConfig.rateLimit.windowMs).toBe(900000);
       expect(apiConfig.rateLimit.max).toBe(100);
@@ -213,6 +214,7 @@ describe('Configuration Module', () => {
 
     it('should handle conditional logic for different environments', () => {
       expect(apiConfig.environment).toBe('test');
+      // .env file is loaded, so CORS_CREDENTIALS=true
       expect(apiConfig.cors.credentials).toBe(true);
       expect(apiConfig.cors.origin).toBe('http://localhost:3000');
     });
