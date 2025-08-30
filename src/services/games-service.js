@@ -1,14 +1,31 @@
-import { GamesRepository } from '../database/repositories/games-repository.js';
+import { GamesServiceInterface } from '../interfaces/games-service-interface.js';
+import { createTransactionManager } from '../utils/transaction-manager.js';
+import logger from '../utils/logger.js';
+import { ErrorFactory } from '../utils/errors.js';
+import { businessConfig } from '../config/index.js';
+import { GameValidator } from '../validators/game-validator.js';
 
 /**
  * Games Service
  *
- * Service layer for games business logic.
- * Implements the Service Layer pattern to separate business logic from data access.
+ * Handles business logic for games operations.
+ * Implements transaction management for data consistency.
  */
-export class GamesService {
-  constructor (databaseAdapter) {
-    this.gamesRepository = new GamesRepository(databaseAdapter);
+export class GamesService extends GamesServiceInterface {
+  constructor (gamesRepository, databaseAdapter) {
+    super();
+
+    if (!gamesRepository) {
+      throw ErrorFactory.service('GamesService', 'constructor', 'GamesRepository is required');
+    }
+
+    if (!databaseAdapter) {
+      throw ErrorFactory.service('GamesService', 'constructor', 'DatabaseAdapter is required');
+    }
+
+    this.gamesRepository = gamesRepository;
+    this.databaseAdapter = databaseAdapter;
+    this.transactionManager = createTransactionManager(databaseAdapter);
   }
 
   /**
@@ -30,7 +47,7 @@ export class GamesService {
       ]);
 
       // Calculate pagination metadata
-      const { limit = 50, offset = 0 } = sanitizedOptions;
+      const { limit = businessConfig.games.pagination.defaultLimit, offset = businessConfig.games.pagination.defaultOffset } = sanitizedOptions;
       const totalPages = Math.ceil(totalCount / limit);
       const currentPage = Math.floor(offset / limit) + 1;
 
@@ -48,8 +65,13 @@ export class GamesService {
         }
       };
     } catch (error) {
-      console.error('Error in getGames service:', error);
-      throw new Error('Failed to retrieve games');
+      logger.error('Error in getGames service', error, {
+        service: 'GamesService',
+        operation: 'getGames',
+        filters,
+        options
+      });
+      throw ErrorFactory.service('GamesService', 'getGames', error.message);
     }
   }
 
@@ -67,7 +89,7 @@ export class GamesService {
       const game = await this.gamesRepository.findById(gameId);
 
       if (!game) {
-        throw new Error('Game not found');
+        throw ErrorFactory.notFound('Game', gameId);
       }
 
       return {
@@ -75,7 +97,11 @@ export class GamesService {
         data: game
       };
     } catch (error) {
-      console.error('Error in getGameById service:', error);
+      logger.error('Error in getGameById service', error, {
+        service: 'GamesService',
+        operation: 'getGameById',
+        gameId
+      });
       throw error;
     }
   }
@@ -99,8 +125,12 @@ export class GamesService {
         }
       };
     } catch (error) {
-      console.error('Error in getLiveGames service:', error);
-      throw new Error('Failed to retrieve live games');
+      logger.error('Error in getLiveGames service', error, {
+        service: 'GamesService',
+        operation: 'getLiveGames',
+        filters
+      });
+      throw ErrorFactory.service('GamesService', 'getLiveGames', error.message);
     }
   }
 
@@ -115,11 +145,11 @@ export class GamesService {
     try {
       // Validate dates
       if (!startDate || !endDate) {
-        throw new Error('Start date and end date are required');
+        throw ErrorFactory.badRequest('Start date and end date are required');
       }
 
       if (new Date(startDate) > new Date(endDate)) {
-        throw new Error('Start date must be before or equal to end date');
+        throw ErrorFactory.badRequest('Start date must be before or equal to end date');
       }
 
       const sanitizedFilters = this.sanitizeFilters(filters);
@@ -136,7 +166,13 @@ export class GamesService {
         }
       };
     } catch (error) {
-      console.error('Error in getGamesByDateRange service:', error);
+      logger.error('Error in getGamesByDateRange service', error, {
+        service: 'GamesService',
+        operation: 'getGamesByDateRange',
+        startDate,
+        endDate,
+        filters
+      });
       throw error;
     }
   }
@@ -150,7 +186,7 @@ export class GamesService {
   async getGamesByTeam (teamName, filters = {}) {
     try {
       if (!teamName) {
-        throw new Error('Team name is required');
+        throw ErrorFactory.badRequest('Team name is required');
       }
 
       const sanitizedFilters = this.sanitizeFilters(filters);
@@ -165,7 +201,12 @@ export class GamesService {
         }
       };
     } catch (error) {
-      console.error('Error in getGamesByTeam service:', error);
+      logger.error('Error in getGamesByTeam service', error, {
+        service: 'GamesService',
+        operation: 'getGamesByTeam',
+        teamName,
+        filters
+      });
       throw error;
     }
   }
@@ -178,24 +219,45 @@ export class GamesService {
   async createGame (gameData) {
     try {
       // Validate game data
-      this.validateGameData(gameData);
+      GameValidator.validateGameData(gameData);
 
-      // Check if game already exists
-      const existingGame = await this.gamesRepository.findById(gameData.game_id);
-      if (existingGame) {
-        throw new Error('Game with this ID already exists');
-      }
+      // Execute in transaction to ensure data consistency
+      return await this.transactionManager.executeInTransaction(async (transaction, transactionId) => {
+        logger.debug('Creating game in transaction', {
+          transactionId,
+          gameId: gameData.game_id
+        });
 
-      // Create the game
-      const createdGame = await this.gamesRepository.create(gameData);
+        // Check if game already exists
+        const existingGame = await this.gamesRepository.findById(gameData.game_id, transaction);
+        if (existingGame) {
+          throw ErrorFactory.conflict('Game with this ID already exists', 'game', { gameId: gameData.game_id });
+        }
 
-      return {
-        success: true,
-        data: createdGame,
-        message: 'Game created successfully'
-      };
+        // Create the game
+        const createdGame = await this.gamesRepository.create(gameData, transaction);
+
+        logger.debug('Game created successfully in transaction', {
+          transactionId,
+          gameId: createdGame.game_id
+        });
+
+        return {
+          success: true,
+          data: createdGame,
+          message: 'Game created successfully',
+          metadata: {
+            transactionId
+          }
+        };
+      });
+
     } catch (error) {
-      console.error('Error in createGame service:', error);
+      logger.error('Error in createGame service', error, {
+        service: 'GamesService',
+        operation: 'createGame',
+        gameData
+      });
       throw error;
     }
   }
@@ -213,22 +275,47 @@ export class GamesService {
       }
 
       // Validate update data
-      this.validateGameUpdateData(updateData);
+      GameValidator.validateGameUpdateData(updateData);
 
-      // Update the game
-      const updatedGame = await this.gamesRepository.update(gameId, updateData);
+      // Execute in transaction to ensure data consistency
+      return await this.transactionManager.executeInTransaction(async (transaction, transactionId) => {
+        logger.debug('Updating game in transaction', {
+          transactionId,
+          gameId
+        });
 
-      if (!updatedGame) {
-        throw new Error('Game not found');
-      }
+        // Check if game exists and get current data
+        const existingGame = await this.gamesRepository.findById(gameId, transaction);
+        if (!existingGame) {
+          throw new Error('Game not found');
+        }
 
-      return {
-        success: true,
-        data: updatedGame,
-        message: 'Game updated successfully'
-      };
+        // Update the game
+        const updatedGame = await this.gamesRepository.update(gameId, updateData, transaction);
+
+        logger.debug('Game updated successfully in transaction', {
+          transactionId,
+          gameId
+        });
+
+        return {
+          success: true,
+          data: updatedGame,
+          message: 'Game updated successfully',
+          metadata: {
+            transactionId,
+            previousData: existingGame
+          }
+        };
+      });
+
     } catch (error) {
-      console.error('Error in updateGame service:', error);
+      logger.error('Error in updateGame service', error, {
+        service: 'GamesService',
+        operation: 'updateGame',
+        gameId,
+        updateData
+      });
       throw error;
     }
   }
@@ -244,25 +331,214 @@ export class GamesService {
         throw new Error('Game ID is required');
       }
 
-      // Check if game exists
-      const existingGame = await this.gamesRepository.findById(gameId);
-      if (!existingGame) {
-        throw new Error('Game not found');
+      // Execute in transaction to ensure data consistency
+      return await this.transactionManager.executeInTransaction(async (transaction, transactionId) => {
+        logger.debug('Deleting game in transaction', {
+          transactionId,
+          gameId
+        });
+
+        // Check if game exists and get current data for potential rollback
+        const existingGame = await this.gamesRepository.findById(gameId, transaction);
+        if (!existingGame) {
+          throw new Error('Game not found');
+        }
+
+        // Delete the game
+        const deleted = await this.gamesRepository.delete(gameId, transaction);
+
+        logger.debug('Game deleted successfully in transaction', {
+          transactionId,
+          gameId
+        });
+
+        return {
+          success: true,
+          message: 'Game deleted successfully',
+          metadata: {
+            gameId,
+            transactionId,
+            deleted,
+            deletedGameData: existingGame
+          }
+        };
+      });
+
+    } catch (error) {
+      logger.error('Error in deleteGame service', error, {
+        service: 'GamesService',
+        operation: 'deleteGame',
+        gameId
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Bulk create games with transaction support
+   * @param {Array<Object>} gamesData - Array of game data
+   * @returns {Promise<Object>} Bulk creation result
+   */
+  async bulkCreateGames (gamesData) {
+    try {
+      // Validate all game data
+      for (const gameData of gamesData) {
+        GameValidator.validateGameData(gameData);
       }
 
-      // Delete the game
-      const deleted = await this.gamesRepository.delete(gameId);
+      // Execute in transaction to ensure all-or-nothing behavior
+      return await this.transactionManager.executeInTransaction(async (transaction, transactionId) => {
+        logger.debug('Bulk creating games in transaction', {
+          transactionId,
+          gamesCount: gamesData.length
+        });
 
-      return {
-        success: true,
-        message: 'Game deleted successfully',
-        metadata: {
-          gameId,
-          deleted
+        const createdGames = [];
+        const errors = [];
+
+        // Process each game
+        for (let i = 0; i < gamesData.length; i++) {
+          const gameData = gamesData[i];
+
+          try {
+            // Check if game already exists
+            const existingGame = await this.gamesRepository.findById(gameData.game_id, transaction);
+            if (existingGame) {
+              errors.push({
+                index: i,
+                gameId: gameData.game_id,
+                error: 'Game with this ID already exists'
+              });
+              continue;
+            }
+
+            // Create the game
+            const createdGame = await this.gamesRepository.create(gameData, transaction);
+            createdGames.push(createdGame);
+
+          } catch (error) {
+            errors.push({
+              index: i,
+              gameId: gameData.game_id,
+              error: error.message
+            });
+          }
         }
-      };
+
+        // If any errors occurred, the transaction will be rolled back
+        if (errors.length > 0) {
+          throw new Error(`Failed to create ${errors.length} games: ${JSON.stringify(errors)}`);
+        }
+
+        logger.debug('Bulk games creation completed successfully in transaction', {
+          transactionId,
+          createdGamesCount: createdGames.length
+        });
+
+        return {
+          success: true,
+          data: createdGames,
+          message: `Successfully created ${createdGames.length} games`,
+          metadata: {
+            transactionId,
+            totalProcessed: gamesData.length,
+            successfulCreations: createdGames.length
+          }
+        };
+      });
+
     } catch (error) {
-      console.error('Error in deleteGame service:', error);
+      logger.error('Error in bulkCreateGames service', error, {
+        service: 'GamesService',
+        operation: 'bulkCreateGames',
+        gamesCount: gamesData.length
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Update multiple games with transaction support
+   * @param {Array<Object>} updates - Array of update objects with gameId and updateData
+   * @returns {Promise<Object>} Bulk update result
+   */
+  async bulkUpdateGames (updates) {
+    try {
+      // Validate all update data
+      for (const update of updates) {
+        if (!update.gameId) {
+          throw new Error('Game ID is required for all updates');
+        }
+        GameValidator.validateGameUpdateData(update.updateData);
+      }
+
+      // Execute in transaction to ensure all-or-nothing behavior
+      return await this.transactionManager.executeInTransaction(async (transaction, transactionId) => {
+        logger.debug('Bulk updating games in transaction', {
+          transactionId,
+          updatesCount: updates.length
+        });
+
+        const updatedGames = [];
+        const errors = [];
+
+        // Process each update
+        for (let i = 0; i < updates.length; i++) {
+          const { gameId, updateData } = updates[i];
+
+          try {
+            // Check if game exists
+            const existingGame = await this.gamesRepository.findById(gameId, transaction);
+            if (!existingGame) {
+              errors.push({
+                index: i,
+                gameId,
+                error: 'Game not found'
+              });
+              continue;
+            }
+
+            // Update the game
+            const updatedGame = await this.gamesRepository.update(gameId, updateData, transaction);
+            updatedGames.push(updatedGame);
+
+          } catch (error) {
+            errors.push({
+              index: i,
+              gameId,
+              error: error.message
+            });
+          }
+        }
+
+        // If any errors occurred, the transaction will be rolled back
+        if (errors.length > 0) {
+          throw new Error(`Failed to update ${errors.length} games: ${JSON.stringify(errors)}`);
+        }
+
+        logger.debug('Bulk games update completed successfully in transaction', {
+          transactionId,
+          updatedGamesCount: updatedGames.length
+        });
+
+        return {
+          success: true,
+          data: updatedGames,
+          message: `Successfully updated ${updatedGames.length} games`,
+          metadata: {
+            transactionId,
+            totalProcessed: updates.length,
+            successfulUpdates: updatedGames.length
+          }
+        };
+      });
+
+    } catch (error) {
+      logger.error('Error in bulkUpdateGames service', error, {
+        service: 'GamesService',
+        operation: 'bulkUpdateGames',
+        updatesCount: updates.length
+      });
       throw error;
     }
   }
@@ -286,8 +562,12 @@ export class GamesService {
         }
       };
     } catch (error) {
-      console.error('Error in getGameStatistics service:', error);
-      throw new Error('Failed to retrieve game statistics');
+      logger.error('Error in getGameStatistics service', error, {
+        service: 'GamesService',
+        operation: 'getGameStatistics',
+        filters
+      });
+      throw ErrorFactory.service('GamesService', 'getGameStatistics', error.message);
     }
   }
 
@@ -325,85 +605,52 @@ export class GamesService {
    * @returns {Object} Sanitized filters
    */
   sanitizeFilters (filters) {
-    const sanitized = {};
-
-    // Handle undefined or null filters
     if (!filters) {
-      return sanitized;
+      return {};
     }
 
-    // Process each filter type
-    const dateFilter = this._sanitizeStringFilter(filters.date);
-    if (dateFilter) sanitized.date = dateFilter;
+    const filterConfigs = [
+      { key: 'date', sanitizer: this._sanitizeStringFilter.bind(this), toLowerCase: false },
+      { key: 'sport', sanitizer: this._sanitizeStringFilter.bind(this), toLowerCase: true },
+      { key: 'status', sanitizer: this._validateStatus.bind(this), toLowerCase: false },
+      { key: 'conference', sanitizer: this._sanitizeStringFilter.bind(this), toLowerCase: false },
+      { key: 'homeTeam', sanitizer: this._sanitizeStringFilter.bind(this), toLowerCase: false },
+      { key: 'awayTeam', sanitizer: this._sanitizeStringFilter.bind(this), toLowerCase: false },
+      { key: 'dataSource', sanitizer: this._sanitizeStringFilter.bind(this), toLowerCase: true }
+    ];
 
-    const sportFilter = this._sanitizeStringFilter(filters.sport, true);
-    if (sportFilter) sanitized.sport = sportFilter;
+    return this.processFilters(filters, filterConfigs);
+  }
 
-    const statusFilter = this._validateStatus(filters.status);
-    if (statusFilter) sanitized.status = statusFilter;
+  /**
+   * Process filters using configuration
+   * @param {Object} filters - Raw filters
+   * @param {Array} filterConfigs - Filter configurations
+   * @returns {Object} Sanitized filters
+   * @private
+   */
+  processFilters (filters, filterConfigs) {
+    const sanitized = {};
 
-    const conferenceFilter = this._sanitizeStringFilter(filters.conference);
-    if (conferenceFilter) sanitized.conference = conferenceFilter;
-
-    const homeTeamFilter = this._sanitizeStringFilter(filters.homeTeam);
-    if (homeTeamFilter) sanitized.homeTeam = homeTeamFilter;
-
-    const awayTeamFilter = this._sanitizeStringFilter(filters.awayTeam);
-    if (awayTeamFilter) sanitized.awayTeam = awayTeamFilter;
-
-    const dataSourceFilter = this._sanitizeStringFilter(filters.dataSource, true);
-    if (dataSourceFilter) sanitized.dataSource = dataSourceFilter;
+    filterConfigs.forEach(config => {
+      const value = filters[config.key];
+      if (value !== undefined) {
+        const sanitizedValue = config.sanitizer(value, config.toLowerCase);
+        if (sanitizedValue) {
+          sanitized[config.key] = sanitizedValue;
+        }
+      }
+    });
 
     return sanitized;
   }
 
-  /**
-   * Validate and sanitize limit option
-   * @param {any} limit - Raw limit value
-   * @returns {number} Sanitized limit
-   */
-  _sanitizeLimit (limit) {
-    if (limit && !isNaN(limit)) {
-      return Math.min(Math.max(parseInt(limit), 1), 100);
-    }
-    return 50;
-  }
 
-  /**
-   * Validate and sanitize offset option
-   * @param {any} offset - Raw offset value
-   * @returns {number} Sanitized offset
-   */
-  _sanitizeOffset (offset) {
-    if (offset && !isNaN(offset)) {
-      return Math.max(parseInt(offset), 0);
-    }
-    return 0;
-  }
-
-  /**
-   * Validate and sanitize sort by option
-   * @param {string} sortBy - Raw sort by value
-   * @returns {string} Valid sort field
-   */
-  _sanitizeSortBy (sortBy) {
-    const validSortFields = ['date', 'home_team', 'away_team', 'sport', 'status', 'created_at'];
-    if (sortBy && typeof sortBy === 'string' && validSortFields.includes(sortBy)) {
-      return sortBy;
-    }
-    return 'date';
-  }
-
-  /**
-   * Validate and sanitize sort order option
-   * @param {string} sortOrder - Raw sort order value
-   * @returns {string} Valid sort order
-   */
   _sanitizeSortOrder (sortOrder) {
     if (sortOrder && typeof sortOrder === 'string') {
-      return sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+      return sortOrder.toUpperCase() === 'ASC' ? 'ASC' : businessConfig.games.sortOptions.defaultOrder;
     }
-    return 'DESC';
+    return businessConfig.games.sortOptions.defaultOrder;
   }
 
   /**
@@ -412,62 +659,6 @@ export class GamesService {
    * @returns {Object} Sanitized options
    */
   sanitizeOptions (options) {
-    return {
-      limit: this._sanitizeLimit(options.limit),
-      offset: this._sanitizeOffset(options.offset),
-      sortBy: this._sanitizeSortBy(options.sortBy),
-      sortOrder: this._sanitizeSortOrder(options.sortOrder)
-    };
-  }
-
-  /**
-   * Validate game data for creation
-   * @param {Object} gameData - Game data to validate
-   */
-  validateGameData (gameData) {
-    const requiredFields = ['game_id', 'date', 'home_team', 'away_team', 'sport', 'status', 'data_source'];
-
-    for (const field of requiredFields) {
-      if (gameData[field] === undefined || gameData[field] === null) {
-        throw new Error(`Missing required field: ${field}`);
-      }
-    }
-
-    // Validate date format
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(gameData.date)) {
-      throw new Error('Invalid date format. Use YYYY-MM-DD');
-    }
-
-    // Validate status
-    const validStatuses = ['scheduled', 'in_progress', 'completed', 'final', 'postponed', 'cancelled'];
-    if (!validStatuses.includes(gameData.status)) {
-      throw new Error('Invalid status value');
-    }
-
-    // Validate sport
-    if (gameData.sport.length < 1 || gameData.sport.length > 50) {
-      throw new Error('Sport name must be between 1 and 50 characters');
-    }
-  }
-
-  /**
-   * Validate game update data
-   * @param {Object} updateData - Update data to validate
-   */
-  validateGameUpdateData (updateData) {
-    if (updateData.date && !/^\d{4}-\d{2}-\d{2}$/.test(updateData.date)) {
-      throw new Error('Invalid date format. Use YYYY-MM-DD');
-    }
-
-    if (updateData.status) {
-      const validStatuses = ['scheduled', 'in_progress', 'completed', 'final', 'postponed', 'cancelled'];
-      if (!validStatuses.includes(updateData.status)) {
-        throw new Error('Invalid status value');
-      }
-    }
-
-    if (updateData.sport !== undefined && updateData.sport !== null && (updateData.sport.length < 1 || updateData.sport.length > 50)) {
-      throw new Error('Sport name must be between 1 and 50 characters');
-    }
+    return GameValidator.sanitizePaginationOptions(options);
   }
 }

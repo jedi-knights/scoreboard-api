@@ -1,5 +1,4 @@
 import express from 'express';
-import { GamesController } from '../controllers/games-controller.js';
 
 /**
  * Games Routes
@@ -7,9 +6,9 @@ import { GamesController } from '../controllers/games-controller.js';
  * Defines all games-related API endpoints.
  * Implements RESTful routing patterns.
  */
-export function createGamesRoutes (databaseAdapter) {
+export function createGamesRoutes (container) {
   const router = express.Router();
-  const gamesController = new GamesController(databaseAdapter);
+  const gamesController = container.resolve('gamesController');
 
   // GET /api/games - List all games with filters and pagination
   router.get('/', gamesController.getGames.bind(gamesController));

@@ -93,10 +93,67 @@ const healthConfig = {
   checks: ['database', 'memory', 'disk']
 };
 
+// Import ingestion configuration
+import { ingestionConfig } from './ingestion-config.js';
+
+// Business logic configuration
+const businessConfig = {
+  // NCAA Ingestion settings (imported from dedicated config)
+  ncaaIngestion: ingestionConfig.ncaa,
+
+  // General ingestion settings (imported from dedicated config)
+  ingestion: ingestionConfig.general,
+
+  // Games service settings
+  games: {
+    pagination: {
+      defaultLimit: parseInt(process.env.GAMES_DEFAULT_LIMIT) || 50,
+      maxLimit: parseInt(process.env.GAMES_MAX_LIMIT) || 100,
+      defaultOffset: parseInt(process.env.GAMES_DEFAULT_OFFSET) || 0,
+      maxOffset: parseInt(process.env.GAMES_MAX_OFFSET) || 10000
+    },
+    validation: {
+      gameId: {
+        minLength: parseInt(process.env.GAME_ID_MIN_LENGTH) || 1,
+        maxLength: parseInt(process.env.GAME_ID_MAX_LENGTH) || 100
+      },
+      sport: {
+        minLength: parseInt(process.env.SPORT_MIN_LENGTH) || 1,
+        maxLength: parseInt(process.env.SPORT_MAX_LENGTH) || 50
+      },
+      teamName: {
+        minLength: parseInt(process.env.TEAM_NAME_MIN_LENGTH) || 1,
+        maxLength: parseInt(process.env.TEAM_NAME_MAX_LENGTH) || 100
+      },
+      conference: {
+        minLength: parseInt(process.env.CONFERENCE_MIN_LENGTH) || 1,
+        maxLength: parseInt(process.env.CONFERENCE_MAX_LENGTH) || 100
+      },
+      colors: {
+        minLength: parseInt(process.env.COLORS_MIN_LENGTH) || 1,
+        maxLength: parseInt(process.env.COLORS_MAX_LENGTH) || 100
+      }
+    },
+    sortOptions: {
+      validFields: ['date', 'home_team', 'away_team', 'sport', 'status', 'created_at'],
+      defaultField: 'date',
+      defaultOrder: 'DESC'
+    }
+  },
+
+  // Test configuration
+  testing: {
+    unitTestTimeout: parseInt(process.env.UNIT_TEST_TIMEOUT) || 5000,
+    integrationTestTimeout: parseInt(process.env.INTEGRATION_TEST_TIMEOUT) || 60000,
+    testDelay: parseInt(process.env.TEST_DELAY) || 1000
+  }
+};
+
 export {
   databaseConfig,
   apiConfig,
   securityConfig,
   loggingConfig,
-  healthConfig
+  healthConfig,
+  businessConfig
 };

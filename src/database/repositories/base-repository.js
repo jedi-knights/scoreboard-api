@@ -90,9 +90,13 @@ export class BaseRepository {
    * Execute a custom query
    * @param {string} query - Custom query
    * @param {Array} params - Query parameters
+   * @param {Object} transaction - Optional transaction object
    * @returns {Promise<any>} Query result
    */
-  async executeQuery (query, params = []) {
+  async executeQuery (query, params = [], transaction = null) {
+    if (transaction) {
+      return this.db.query(query, params, transaction);
+    }
     return this.db.query(query, params);
   }
 
@@ -100,9 +104,13 @@ export class BaseRepository {
    * Execute a custom query for a single result
    * @param {string} query - Custom query
    * @param {Array} params - Query parameters
+   * @param {Object} transaction - Optional transaction object
    * @returns {Promise<Object|null>} Query result or null
    */
-  async executeQuerySingle (query, params = []) {
+  async executeQuerySingle (query, params = [], transaction = null) {
+    if (transaction) {
+      return this.db.get(query, params, transaction);
+    }
     return this.db.get(query, params);
   }
 
@@ -110,9 +118,13 @@ export class BaseRepository {
    * Execute a custom query that doesn't return results
    * @param {string} query - Custom query
    * @param {Array} params - Query parameters
+   * @param {Object} transaction - Optional transaction object
    * @returns {Promise<Object>} Query result
    */
-  async executeQueryRun (query, params = []) {
+  async executeQueryRun (query, params = [], transaction = null) {
+    if (transaction) {
+      return this.db.run(query, params, transaction);
+    }
     return this.db.run(query, params);
   }
 

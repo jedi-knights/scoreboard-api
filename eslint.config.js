@@ -69,7 +69,7 @@ export default [
       'no-multiple-empty-lines': ['error', { max: 2, maxEOF: 1 }],
       
       // Complexity rules
-      'complexity': ['error', { max: 10 }]
+      'complexity': ['error', { max: 7 }]
     }
   },
   {

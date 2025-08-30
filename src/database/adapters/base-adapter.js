@@ -40,10 +40,33 @@ export class BaseDatabaseAdapter {
    * Execute a raw query
    * @param {string} query - The query to execute
    * @param {Array} _params - Query parameters
+   * @param {Object} _transaction - Optional transaction object
    * @returns {Promise<any>}
    */
-  async query (query, _params = []) {
+  async query (query, _params = [], _transaction = null) {
     throw new Error('query() method must be implemented by subclass');
+  }
+
+  /**
+   * Execute a single row query
+   * @param {string} query - The query to execute
+   * @param {Array} _params - Query parameters
+   * @param {Object} _transaction - Optional transaction object
+   * @returns {Promise<Object|null>}
+   */
+  async get (query, _params = [], _transaction = null) {
+    throw new Error('get() method must be implemented by subclass');
+  }
+
+  /**
+   * Execute a query that doesn't return results
+   * @param {string} query - The query to execute
+   * @param {Array} _params - Query parameters
+   * @param {Object} _transaction - Optional transaction object
+   * @returns {Promise<Object>}
+   */
+  async run (query, _params = [], _transaction = null) {
+    throw new Error('run() method must be implemented by subclass');
   }
 
   /**

@@ -64,7 +64,25 @@ export function generateCollectionLinks (req, resourcePath, pagination, filters 
   const { page = 1, limit = 10, total = 0 } = pagination;
   const totalPages = Math.ceil(total / limit);
 
-  const links = {
+  const links = createBaseCollectionLinks(baseUrl, resourcePath, page, limit, totalPages);
+  addNavigationLinks(links, baseUrl, resourcePath, page, limit, totalPages);
+  addFilterLinks(links, baseUrl, resourcePath, filters);
+
+  return links;
+}
+
+/**
+ * Create base collection links (self, first, last)
+ * @param {string} baseUrl - Base API URL
+ * @param {string} resourcePath - Resource path
+ * @param {number} page - Current page
+ * @param {number} limit - Page limit
+ * @param {number} totalPages - Total pages
+ * @returns {Object} Base collection links
+ * @private
+ */
+function createBaseCollectionLinks (baseUrl, resourcePath, page, limit, totalPages) {
+  return {
     self: createLink(
       `${baseUrl}/${resourcePath}?page=${page}&limit=${limit}`,
       'self',
@@ -84,7 +102,19 @@ export function generateCollectionLinks (req, resourcePath, pagination, filters 
       'Last page of results'
     )
   };
+}
 
+/**
+ * Add navigation links (prev, next)
+ * @param {Object} links - Links object to modify
+ * @param {string} baseUrl - Base API URL
+ * @param {string} resourcePath - Resource path
+ * @param {number} page - Current page
+ * @param {number} limit - Page limit
+ * @param {number} totalPages - Total pages
+ * @private
+ */
+function addNavigationLinks (links, baseUrl, resourcePath, page, limit, totalPages) {
   if (page > 1) {
     links.prev = createLink(
       `${baseUrl}/${resourcePath}?page=${page - 1}&limit=${limit}`,
@@ -102,8 +132,17 @@ export function generateCollectionLinks (req, resourcePath, pagination, filters 
       'Next page of results'
     );
   }
+}
 
-  // Add filter links if filters are applied
+/**
+ * Add filter links if filters are applied
+ * @param {Object} links - Links object to modify
+ * @param {string} baseUrl - Base API URL
+ * @param {string} resourcePath - Resource path
+ * @param {Object} filters - Applied filters
+ * @private
+ */
+function addFilterLinks (links, baseUrl, resourcePath, filters) {
   if (Object.keys(filters).length > 0) {
     const filterParams = new URLSearchParams(filters);
     links.filtered = createLink(
@@ -113,8 +152,6 @@ export function generateCollectionLinks (req, resourcePath, pagination, filters 
       'Filtered results'
     );
   }
-
-  return links;
 }
 
 /**

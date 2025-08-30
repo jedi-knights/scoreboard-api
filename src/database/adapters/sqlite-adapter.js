@@ -3,6 +3,7 @@ import { open } from 'sqlite';
 import { BaseDatabaseAdapter } from './base-adapter.js';
 import path from 'path';
 import fs from 'fs';
+import logger from '../../utils/logger.js';
 
 /**
  * SQLite Database Adapter
@@ -41,9 +42,9 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
       // Create tables if they don't exist
       await this.createTables();
 
-      console.log(`SQLite database connected: ${this.connectionPath}`);
+      logger.info(`SQLite database connected: ${this.connectionPath}`, { adapter: 'SQLiteAdapter', operation: 'connect' });
     } catch (error) {
-      console.error('Failed to connect to SQLite database:', error);
+      logger.error('Failed to connect to SQLite database', error, { adapter: 'SQLiteAdapter', operation: 'connect' });
       throw error;
     }
   }
@@ -56,7 +57,7 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
     if (this.db) {
       await this.db.close();
       this.db = null;
-      console.log('SQLite database disconnected');
+      logger.info('SQLite database disconnected', { adapter: 'SQLiteAdapter', operation: 'disconnect' });
     }
   }
 
@@ -75,21 +76,27 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
   }
 
   /**
-   * Execute a raw query
+   * Execute a query
    * @param {string} query - The SQL query to execute
    * @param {Array} params - Query parameters
+   * @param {Object} transaction - Optional transaction object
    * @returns {Promise<any>}
    */
-  async query (query, params = []) {
+  async query (query, params = [], transaction = null) {
     if (!this.db) {
       throw new Error('Database not connected');
     }
 
     try {
-      const result = await this.db.all(query, params);
-      return result;
+      if (transaction) {
+        const result = await transaction.db.all(query, params);
+        return result;
+      } else {
+        const result = await this.db.all(query, params);
+        return result;
+      }
     } catch (error) {
-      console.error('Query execution failed:', error);
+      logger.error('Query execution failed', error, { adapter: 'SQLiteAdapter', operation: 'query' });
       throw error;
     }
   }
@@ -98,19 +105,44 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
    * Execute a single row query
    * @param {string} query - The SQL query to execute
    * @param {Array} params - Query parameters
+   * @param {Object} transaction - Optional transaction object
    * @returns {Promise<Object|null>}
    */
-  async get (query, params = []) {
+  async get (query, params = [], transaction = null) {
+    this.validateDatabaseConnection();
+
+    try {
+      const result = await this.executeGetQuery(query, params, transaction);
+      return result || null;
+    } catch (error) {
+      logger.error('Query execution failed', error, { adapter: 'SQLiteAdapter', operation: 'get' });
+      throw error;
+    }
+  }
+
+  /**
+   * Validate database connection
+   * @private
+   */
+  validateDatabaseConnection () {
     if (!this.db) {
       throw new Error('Database not connected');
     }
+  }
 
-    try {
-      const result = await this.db.get(query, params);
-      return result || null;
-    } catch (error) {
-      console.error('Query execution failed:', error);
-      throw error;
+  /**
+   * Execute get query with or without transaction
+   * @param {string} query - The SQL query to execute
+   * @param {Array} params - Query parameters
+   * @param {Object} transaction - Optional transaction object
+   * @returns {Promise<Object>}
+   * @private
+   */
+  async executeGetQuery (query, params, transaction) {
+    if (transaction) {
+      return await transaction.db.get(query, params);
+    } else {
+      return await this.db.get(query, params);
     }
   }
 
@@ -118,18 +150,24 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
    * Execute a query that doesn't return results
    * @param {string} query - The SQL query to execute
    * @param {Array} params - Query parameters
+   * @param {Object} transaction - Optional transaction object
    * @returns {Promise<Object>}
    */
-  async run (query, params = []) {
+  async run (query, params = [], transaction = null) {
     if (!this.db) {
       throw new Error('Database not connected');
     }
 
     try {
-      const result = await this.db.run(query, params);
-      return result;
+      if (transaction) {
+        const result = await transaction.db.run(query, params);
+        return result;
+      } else {
+        const result = await this.db.run(query, params);
+        return result;
+      }
     } catch (error) {
-      console.error('Query execution failed:', error);
+      logger.error('Query execution failed', error, { adapter: 'SQLiteAdapter', operation: 'run' });
       throw error;
     }
   }
@@ -147,7 +185,7 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
       await this.db.exec('BEGIN TRANSACTION');
       return { db: this.db, committed: false };
     } catch (error) {
-      console.error('Failed to begin transaction:', error);
+      logger.error('Failed to begin transaction', error, { adapter: 'SQLiteAdapter', operation: 'beginTransaction' });
       throw error;
     }
   }
@@ -166,7 +204,7 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
       await transaction.db.exec('COMMIT');
       transaction.committed = true;
     } catch (error) {
-      console.error('Failed to commit transaction:', error);
+      logger.error('Failed to commit transaction', error, { adapter: 'SQLiteAdapter', operation: 'commitTransaction' });
       throw error;
     }
   }
@@ -184,7 +222,7 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
     try {
       await transaction.db.exec('ROLLBACK');
     } catch (error) {
-      console.error('Failed to rollback transaction:', error);
+      logger.error('Failed to rollback transaction', error, { adapter: 'SQLiteAdapter', operation: 'rollbackTransaction' });
       // Don't throw here as rollback failures are not critical
     }
   }
@@ -260,13 +298,32 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
         state TEXT,
         country TEXT,
         conference TEXT,
-        division TEXT,
+        division TEXT NOT NULL,
         sport TEXT NOT NULL,
         gender TEXT NOT NULL,
         level TEXT NOT NULL,
         website TEXT,
         logo_url TEXT,
         colors TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Conferences table
+      CREATE TABLE IF NOT EXISTS conferences (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        conference_id TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        short_name TEXT,
+        sport TEXT NOT NULL,
+        division TEXT NOT NULL,
+        gender TEXT NOT NULL,
+        level TEXT NOT NULL,
+        website TEXT,
+        logo_url TEXT,
+        colors TEXT,
+        region TEXT,
+        country TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
@@ -309,13 +366,16 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
       CREATE INDEX IF NOT EXISTS idx_teams_sport ON teams(sport);
       CREATE INDEX IF NOT EXISTS idx_teams_conference ON teams(conference);
       CREATE INDEX IF NOT EXISTS idx_teams_division ON teams(division);
+      CREATE INDEX IF NOT EXISTS idx_conferences_sport ON conferences(sport);
+      CREATE INDEX IF NOT EXISTS idx_conferences_division ON conferences(division);
+      CREATE INDEX IF NOT EXISTS idx_conferences_gender ON conferences(gender);
     `;
 
     try {
       await this.db.exec(createTablesSQL);
-      console.log('SQLite tables created successfully');
+      logger.info('SQLite tables created successfully', { adapter: 'SQLiteAdapter', operation: 'createTables' });
     } catch (error) {
-      console.error('Failed to create tables:', error);
+      logger.error('Failed to create tables', error, { adapter: 'SQLiteAdapter', operation: 'createTables' });
       throw error;
     }
   }
@@ -330,13 +390,14 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
       DROP TABLE IF EXISTS collections;
       DROP TABLE IF EXISTS games;
       DROP TABLE IF EXISTS teams;
+      DROP TABLE IF EXISTS conferences;
     `;
 
     try {
       await this.db.exec(dropTablesSQL);
-      console.log('SQLite tables dropped successfully');
+      logger.info('SQLite tables dropped successfully', { adapter: 'SQLiteAdapter', operation: 'dropTables' });
     } catch (error) {
-      console.error('Failed to drop tables:', error);
+      logger.error('Failed to drop tables', error, { adapter: 'SQLiteAdapter', operation: 'dropTables' });
       throw error;
     }
   }

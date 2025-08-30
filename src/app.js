@@ -9,7 +9,16 @@ import 'express-async-errors';
 import { apiConfig } from './config/index.js';
 import { createGamesRoutes } from './routes/games-routes.js';
 import { createHealthRoutes } from './routes/health-routes.js';
+import { createNCAAIngestionRoutes } from './routes/ncaa-ingestion-routes.js';
 import { generateNavigationLinks, enhanceWithLinks } from './utils/hateoas.js';
+import { createContainer } from './container.js';
+import {
+  globalErrorHandler,
+  notFoundHandler,
+  requestLogger,
+  setupUnhandledErrorHandling
+} from './middleware/error-handler.js';
+import { initializeSwagger, getSwaggerSpec } from './middleware/swagger.js';
 
 /**
  * Express Application
@@ -19,6 +28,12 @@ import { generateNavigationLinks, enhanceWithLinks } from './utils/hateoas.js';
  */
 export function createApp (databaseAdapter) {
   const app = express();
+
+  // Create dependency injection container
+  const container = createContainer(databaseAdapter);
+
+  // Initialize Swagger documentation
+  const swagger = initializeSwagger();
 
   // Security middleware
   app.use(helmet({
@@ -73,22 +88,74 @@ export function createApp (databaseAdapter) {
   }
 
   // Request logging middleware
-  app.use((req, res, next) => {
-    const start = Date.now();
-    res.on('finish', () => {
-      const duration = Date.now() - start;
-      console.log(`${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`);
-    });
-    next();
-  });
+  app.use(requestLogger);
 
   // Health check routes (no authentication required)
   app.use('/health', createHealthRoutes(databaseAdapter));
 
-  // API routes
-  app.use(`/api/${apiConfig.version}/games`, createGamesRoutes(databaseAdapter));
+  // Swagger API documentation routes
+  app.use('/api-docs', swagger.serveSwaggerUi);
+  app.get('/api-docs', swagger.swaggerUiMiddleware);
+  app.get('/api-docs.json', getSwaggerSpec(swagger.specs));
 
-  // Root endpoint
+  // API routes
+  app.use(`/api/${apiConfig.version}/games`, createGamesRoutes(container));
+  app.use(`/api/${apiConfig.version}/ncaa/ingest`, createNCAAIngestionRoutes(container));
+
+  /**
+   * @swagger
+   * /:
+   *   get:
+   *     summary: API Root
+   *     description: Get API information, version, and available endpoints
+   *     tags: [API Info]
+   *     responses:
+   *       200:
+   *         description: API information retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Scoreboard API
+   *                 version:
+   *                   type: string
+   *                   example: 1.0.0
+   *                 environment:
+   *                   type: string
+   *                   example: development
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
+   *                 description:
+   *                   type: string
+   *                   example: A comprehensive sports scoreboard API with HATEOAS support
+   *                 features:
+   *                   type: array
+   *                   items:
+   *                     type: string
+   *                   example:
+   *                     - Real-time game data
+   *                     - Team and conference management
+   *                     - Advanced filtering and search
+   *                     - Hypermedia-driven navigation
+   *                     - Multiple database backends
+   *                     - Interactive API documentation
+   *                 documentation:
+   *                   type: object
+   *                   properties:
+   *                     swagger:
+   *                       type: string
+   *                       example: /api-docs
+   *                     openapi:
+   *                       type: string
+   *                       example: /api-docs.json
+   *                 _links:
+   *                   type: object
+   *                   description: HATEOAS navigation links
+   */
   app.get('/', (req, res) => {
     const rootData = {
       message: 'Scoreboard API',
@@ -101,8 +168,13 @@ export function createApp (databaseAdapter) {
         'Team and conference management',
         'Advanced filtering and search',
         'Hypermedia-driven navigation',
-        'Multiple database backends'
-      ]
+        'Multiple database backends',
+        'Interactive API documentation'
+      ],
+      documentation: {
+        swagger: '/api-docs',
+        openapi: '/api-docs.json'
+      }
     };
 
     // Add HATEOAS navigation links
@@ -113,47 +185,13 @@ export function createApp (databaseAdapter) {
   });
 
   // 404 handler
-  app.use('*', (req, res) => {
-    res.status(404).json({
-      success: false,
-      error: 'Not found',
-      message: `Route ${req.originalUrl} not found`,
-      timestamp: new Date().toISOString()
-    });
-  });
+  app.use('*', notFoundHandler);
 
   // Global error handler
-  app.use((error, req, res, _next) => {
-    console.error('Global error handler:', error);
+  app.use(globalErrorHandler);
 
-    // Handle specific error types
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({
-        success: false,
-        error: 'Validation error',
-        message: error.message,
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    if (error.name === 'UnauthorizedError') {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized',
-        message: 'Invalid or missing authentication',
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    // Default error response
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error',
-      message: apiConfig.environment === 'development' ? error.message : 'Something went wrong',
-      timestamp: new Date().toISOString(),
-      ...(apiConfig.environment === 'development' && { stack: error.stack })
-    });
-  });
+  // Setup unhandled error handling
+  setupUnhandledErrorHandling();
 
   return app;
 }

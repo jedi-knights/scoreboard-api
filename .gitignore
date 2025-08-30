@@ -120,6 +120,15 @@ data/
 config/local.js
 config/production.js
 secrets.json
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+
+# Local development
+.local/
+local/
 
 # Build artifacts
 build/
@@ -131,6 +140,8 @@ out/
 
 # Docker
 .dockerignore
+docker-compose*.yml
+docker-compose*.yaml
 
 # IDE and editor files
 .vscode/
@@ -146,3 +157,23 @@ out/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Swagger and API documentation
+swagger-output/
+openapi-spec.json
+api-docs.json
+
+# Test artifacts
+test-results/
+test-output/
+*.test-results.xml
+
+# Performance and profiling
+*.cpuprofile
+*.heapsnapshot
+*.prof
+
+# Performance and profiling
+*.cpuprofile
+*.heapsnapshot
+*.prof

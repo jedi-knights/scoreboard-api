@@ -813,6 +813,25 @@ The project recently underwent a comprehensive refactoring to improve code quali
    npm run dev
    ```
 
+## 🚀 Quick Start
+
+### View API Documentation
+Once your server is running, you can access the interactive API documentation:
+
+1. **Open your browser** to: `http://localhost:3000/api-docs`
+2. **Explore endpoints** organized by tags (Health, Games, Teams, etc.)
+3. **Test endpoints** directly from the Swagger UI
+4. **View schemas** for request/response data structures
+
+### Test the API
+```bash
+# Test Swagger documentation endpoints
+npm run test:swagger
+
+# Test API functionality
+npm run test:integration
+```
+
 ## ⚙️ Configuration
 
 ### Environment Variables
@@ -1168,10 +1187,18 @@ Your code must pass all of these to be considered valid:
 
 ## 📖 **Documentation**
 
-For detailed information about the database design and improvements:
+### API Documentation
+- **[Swagger API Documentation](docs/swagger-documentation.md)** - Interactive API documentation with automatic generation
+- **[Docker Swagger Integration](docs/docker-swagger-integration.md)** - How Swagger works in Docker containers
+- **Live Swagger UI**: `http://localhost:3000/api-docs` (when running locally)
+- **OpenAPI JSON**: `http://localhost:3000/api-docs.json`
 
+### Database Design
 - **[Entity Design Improvements](docs/entity-improvements.md)** - Comprehensive overview of entity design enhancements
 - **[3NF Database Schema](docs/3nf-improvements.md)** - Detailed explanation of Third Normal Form compliance
+
+### Development & Deployment
+- **[Ignore Files Guide](docs/ignore-files-guide.md)** - What to ignore in Git and Docker
 
 ## 🤝 Contributing
 

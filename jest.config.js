@@ -2,6 +2,11 @@ export default {
   // Test environment
   testEnvironment: 'node',
   
+  // Setup files
+  setupFiles: [
+    '<rootDir>/tests/setup-unit.js'
+  ],
+  
   // Test file patterns
   testMatch: [
     '**/tests/**/*.test.js',
@@ -50,11 +55,20 @@ export default {
   projects: [
     {
       displayName: 'unit',
-      testMatch: ['<rootDir>/tests/unit/**/*.test.js']
+      testMatch: [
+        '<rootDir>/tests/unit/**/*.test.js',
+        '<rootDir>/tests/examples/**/*.test.js'
+      ],
+      setupFilesAfterEnv: [
+        '<rootDir>/tests/setup-unit.js'
+      ]
     },
     {
       displayName: 'integration',
-      testMatch: ['<rootDir>/tests/integration/**/*.test.js']
+      testMatch: ['<rootDir>/tests/integration/**/*.test.js'],
+      setupFilesAfterEnv: [
+        '<rootDir>/tests/integration/setup-integration.js'
+      ]
     }
   ]
 };

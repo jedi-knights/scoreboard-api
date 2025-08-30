@@ -1,5 +1,7 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { GamesService } from '../../../src/services/games-service.js';
+import { GameValidator } from '../../../src/validators/game-validator.js';
+import { businessConfig } from '../../../src/config/index.js';
 
 describe('GamesService - Expanded Tests', () => {
   let service;
@@ -25,23 +27,22 @@ describe('GamesService - Expanded Tests', () => {
       dropTables: jest.fn()
     };
 
-    // Create service instance
-    service = new GamesService(mockDatabaseAdapter);
-    
-    // Get the repository instance from the service
-    mockGamesRepository = service.gamesRepository;
-    
-    // Mock repository methods
-    mockGamesRepository.findAll = jest.fn();
-    mockGamesRepository.findById = jest.fn();
-    mockGamesRepository.findLiveGames = jest.fn();
-    mockGamesRepository.findByDateRange = jest.fn();
-    mockGamesRepository.findByTeam = jest.fn();
-    mockGamesRepository.create = jest.fn();
-    mockGamesRepository.update = jest.fn();
-    mockGamesRepository.delete = jest.fn();
-    mockGamesRepository.count = jest.fn();
-    mockGamesRepository.getStatistics = jest.fn();
+    // Create mock repository
+    mockGamesRepository = {
+      findAll: jest.fn(),
+      findById: jest.fn(),
+      findLiveGames: jest.fn(),
+      findByDateRange: jest.fn(),
+      findByTeam: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      count: jest.fn(),
+      getStatistics: jest.fn()
+    };
+
+    // Create service instance with both repository and database adapter
+    service = new GamesService(mockGamesRepository, mockDatabaseAdapter);
   });
 
   describe('getGames - Expanded', () => {
@@ -86,7 +87,7 @@ describe('GamesService - Expanded Tests', () => {
     it('should handle repository errors gracefully', async () => {
       mockGamesRepository.findAll.mockRejectedValue(new Error('Database error'));
 
-      await expect(service.getGames()).rejects.toThrow('Failed to retrieve games');
+      await expect(service.getGames()).rejects.toThrow('GamesService service error in getGames');
     });
 
     it('should handle count errors gracefully', async () => {
@@ -94,7 +95,7 @@ describe('GamesService - Expanded Tests', () => {
       mockGamesRepository.findAll.mockResolvedValue(mockGames);
       mockGamesRepository.count.mockRejectedValue(new Error('Count error'));
 
-      await expect(service.getGames()).rejects.toThrow('Failed to retrieve games');
+      await expect(service.getGames()).rejects.toThrow('GamesService service error in getGames');
     });
   });
 
@@ -135,7 +136,7 @@ describe('GamesService - Expanded Tests', () => {
     it('should handle repository errors', async () => {
       mockGamesRepository.findLiveGames.mockRejectedValue(new Error('Database error'));
 
-      await expect(service.getLiveGames()).rejects.toThrow('Failed to retrieve live games');
+      await expect(service.getLiveGames()).rejects.toThrow('GamesService service error in getLiveGames');
     });
   });
 
@@ -210,8 +211,9 @@ describe('GamesService - Expanded Tests', () => {
       home_team: 'Lakers',
       away_team: 'Warriors',
       sport: 'basketball',
+      division: 'd1',
       status: 'scheduled',
-      data_source: 'espn'
+      data_source: 'ncaa'
     };
 
     it('should handle duplicate game ID', async () => {
@@ -230,7 +232,7 @@ describe('GamesService - Expanded Tests', () => {
     it('should handle validation errors', async () => {
       const invalidGameData = { ...validGameData, date: 'invalid-date' };
 
-      await expect(service.createGame(invalidGameData)).rejects.toThrow('Invalid date format. Use YYYY-MM-DD');
+      await expect(service.createGame(invalidGameData)).rejects.toThrow('date must match the format: YYYY-MM-DD');
     });
   });
 
@@ -244,17 +246,19 @@ describe('GamesService - Expanded Tests', () => {
     it('should handle game not found during update', async () => {
       mockGamesRepository.update.mockResolvedValue(null);
 
-      await expect(service.updateGame('nonexistent', { status: 'completed' })).rejects.toThrow('Game not found');
+      await expect(service.updateGame('nonexistent', { status: 'final' })).rejects.toThrow('Game not found');
     });
 
     it('should handle repository update errors', async () => {
+      // Mock that the game exists first
+      mockGamesRepository.findById.mockResolvedValue({ id: 1, game_id: 'game-123' });
       mockGamesRepository.update.mockRejectedValue(new Error('Database error'));
 
-      await expect(service.updateGame('game-123', { status: 'completed' })).rejects.toThrow('Database error');
+      await expect(service.updateGame('game-123', { status: 'final' })).rejects.toThrow('Database error');
     });
 
     it('should handle validation errors in update data', async () => {
-      await expect(service.updateGame('game-123', { date: 'invalid-date' })).rejects.toThrow('Invalid date format. Use YYYY-MM-DD');
+      await expect(service.updateGame('game-123', { date: 'invalid-date' })).rejects.toThrow('date must match the format: YYYY-MM-DD');
     });
   });
 
@@ -311,7 +315,7 @@ describe('GamesService - Expanded Tests', () => {
     it('should handle repository errors', async () => {
       mockGamesRepository.getStatistics.mockRejectedValue(new Error('Database error'));
 
-      await expect(service.getGameStatistics()).rejects.toThrow('Failed to retrieve game statistics');
+      await expect(service.getGameStatistics()).rejects.toThrow('GamesService service error in getGameStatistics');
     });
   });
 
@@ -406,92 +410,23 @@ describe('GamesService - Expanded Tests', () => {
     });
   });
 
-  describe('_sanitizeLimit - Expanded', () => {
-    it('should handle valid numeric limits', () => {
-      expect(service._sanitizeLimit(25)).toBe(25);
-      expect(service._sanitizeLimit('50')).toBe(50);
-      expect(service._sanitizeLimit(1)).toBe(1);
-      expect(service._sanitizeLimit(100)).toBe(100);
-    });
 
-    it('should clamp values to valid range', () => {
-      expect(service._sanitizeLimit(1)).toBe(1);
-      expect(service._sanitizeLimit(50)).toBe(50);
-      expect(service._sanitizeLimit(100)).toBe(100);
-      expect(service._sanitizeLimit(150)).toBe(100);
-      expect(service._sanitizeLimit(1000)).toBe(100);
-    });
 
-    it('should handle invalid values', () => {
-      expect(service._sanitizeLimit('invalid')).toBe(50);
-      expect(service._sanitizeLimit(null)).toBe(50);
-      expect(service._sanitizeLimit(undefined)).toBe(50);
-      expect(service._sanitizeLimit({})).toBe(50);
-    });
-  });
 
-  describe('_sanitizeOffset - Expanded', () => {
-    it('should handle valid numeric offsets', () => {
-      expect(service._sanitizeOffset(0)).toBe(0);
-      expect(service._sanitizeOffset(25)).toBe(25);
-      expect(service._sanitizeOffset('50')).toBe(50);
-    });
 
-    it('should ensure non-negative values', () => {
-      expect(service._sanitizeOffset(-5)).toBe(0);
-      expect(service._sanitizeOffset(-100)).toBe(0);
-    });
 
-    it('should handle invalid values', () => {
-      expect(service._sanitizeOffset('invalid')).toBe(0);
-      expect(service._sanitizeOffset(null)).toBe(0);
-      expect(service._sanitizeOffset(undefined)).toBe(0);
-      expect(service._sanitizeOffset({})).toBe(0);
-    });
-  });
 
-  describe('_sanitizeSortBy - Expanded', () => {
-    it('should validate correct sort fields', () => {
-      expect(service._sanitizeSortBy('date')).toBe('date');
-      expect(service._sanitizeSortBy('home_team')).toBe('home_team');
-      expect(service._sanitizeSortBy('away_team')).toBe('away_team');
-      expect(service._sanitizeSortBy('sport')).toBe('sport');
-      expect(service._sanitizeSortBy('status')).toBe('status');
-      expect(service._sanitizeSortBy('created_at')).toBe('created_at');
-    });
 
-    it('should reject invalid sort fields', () => {
-      expect(service._sanitizeSortBy('invalid')).toBe('date');
-      expect(service._sanitizeSortBy('score')).toBe('date');
-      expect(service._sanitizeSortBy('')).toBe('date');
-      expect(service._sanitizeSortBy(null)).toBe('date');
-      expect(service._sanitizeSortBy(undefined)).toBe('date');
-    });
-  });
-
-  describe('_sanitizeSortOrder - Expanded', () => {
-    it('should validate correct sort orders', () => {
-      expect(service._sanitizeSortOrder('ASC')).toBe('ASC');
-      expect(service._sanitizeSortOrder('asc')).toBe('ASC');
-      expect(service._sanitizeSortOrder('DESC')).toBe('DESC');
-      expect(service._sanitizeSortOrder('desc')).toBe('DESC');
-    });
-
-    it('should default to DESC for invalid values', () => {
-      expect(service._sanitizeSortOrder('invalid')).toBe('DESC');
-      expect(service._sanitizeSortOrder('')).toBe('DESC');
-      expect(service._sanitizeSortOrder(null)).toBe('DESC');
-      expect(service._sanitizeSortOrder(undefined)).toBe('DESC');
-    });
-  });
 
   describe('sanitizeOptions - Expanded', () => {
     it('should handle undefined options', () => {
-      expect(() => service.sanitizeOptions(undefined)).toThrow();
+      const result = service.sanitizeOptions(undefined);
+      expect(result).toBeDefined();
     });
 
     it('should handle null options', () => {
-      expect(() => service.sanitizeOptions(null)).toThrow();
+      const result = service.sanitizeOptions(null);
+      expect(result).toBeDefined();
     });
 
     it('should sanitize all option types', () => {
@@ -534,12 +469,13 @@ describe('GamesService - Expanded Tests', () => {
       home_team: 'Lakers',
       away_team: 'Warriors',
       sport: 'basketball',
+      division: 'd1',
       status: 'scheduled',
-      data_source: 'espn'
+      data_source: 'ncaa'
     };
 
     it('should validate complete valid data', () => {
-      expect(() => service.validateGameData(baseGameData)).not.toThrow();
+      expect(() => GameValidator.validateGameDataComprehensive(baseGameData)).not.toThrow();
     });
 
     it('should handle missing required fields', () => {
@@ -549,7 +485,7 @@ describe('GamesService - Expanded Tests', () => {
         const invalidData = { ...baseGameData };
         delete invalidData[field];
         
-        expect(() => service.validateGameData(invalidData)).toThrow(`Missing required field: ${field}`);
+        expect(() => GameValidator.validateGameDataComprehensive(invalidData)).toThrow(`Missing required field: ${field}`);
       });
     });
 
@@ -560,7 +496,7 @@ describe('GamesService - Expanded Tests', () => {
         const invalidData = { ...baseGameData };
         invalidData[field] = null;
         
-        expect(() => service.validateGameData(invalidData)).toThrow(`Missing required field: ${field}`);
+        expect(() => GameValidator.validateGameDataComprehensive(invalidData)).toThrow(`Missing required field: ${field}`);
       });
     });
 
@@ -571,7 +507,7 @@ describe('GamesService - Expanded Tests', () => {
         const invalidData = { ...baseGameData };
         invalidData[field] = undefined;
         
-        expect(() => service.validateGameData(invalidData)).toThrow(`Missing required field: ${field}`);
+        expect(() => GameValidator.validateGameDataComprehensive(invalidData)).toThrow(`Missing required field: ${field}`);
       });
     });
 
@@ -580,7 +516,7 @@ describe('GamesService - Expanded Tests', () => {
       
       invalidDates.forEach(invalidDate => {
         const invalidData = { ...baseGameData, date: invalidDate };
-        expect(() => service.validateGameData(invalidData)).toThrow('Invalid date format. Use YYYY-MM-DD');
+        expect(() => GameValidator.validateGameDataComprehensive(invalidData)).toThrow('date must match the format: YYYY-MM-DD');
       });
     });
 
@@ -589,7 +525,7 @@ describe('GamesService - Expanded Tests', () => {
       
       invalidStatuses.forEach(invalidStatus => {
         const invalidData = { ...baseGameData, status: invalidStatus };
-        expect(() => service.validateGameData(invalidData)).toThrow('Invalid status value');
+        expect(() => GameValidator.validateGameDataComprehensive(invalidData)).toThrow('status must be one of: scheduled, live, final, postponed, cancelled, suspended, delayed, halftime, quarter, period');
       });
     });
 
@@ -598,7 +534,7 @@ describe('GamesService - Expanded Tests', () => {
       
       invalidSports.forEach(invalidSport => {
         const invalidData = { ...baseGameData, sport: invalidSport };
-        expect(() => service.validateGameData(invalidData)).toThrow('Sport name must be between 1 and 50 characters');
+        expect(() => GameValidator.validateGameDataComprehensive(invalidData)).toThrow('sport must be one of: soccer, football, basketball, baseball, softball, volleyball, tennis, golf, swimming, track, cross-country, lacrosse, field-hockey, ice-hockey, wrestling, gymnastics, rowing, sailing');
       });
     });
   });
@@ -607,22 +543,22 @@ describe('GamesService - Expanded Tests', () => {
     it('should validate valid update data', () => {
       const validUpdateData = {
         date: '2024-01-16',
-        status: 'completed',
+        status: 'final',
         sport: 'basketball'
       };
 
-      expect(() => service.validateGameUpdateData(validUpdateData)).not.toThrow();
+      expect(() => GameValidator.validateGameUpdateDataComprehensive(validUpdateData)).not.toThrow();
     });
 
     it('should handle empty update data', () => {
-      expect(() => service.validateGameUpdateData({})).not.toThrow();
+      expect(() => GameValidator.validateGameUpdateDataComprehensive({})).not.toThrow();
     });
 
     it('should validate date format in updates', () => {
       const invalidDates = ['2024/01/15', '15-01-2024', '2024.01.15', 'invalid'];
       
       invalidDates.forEach(invalidDate => {
-        expect(() => service.validateGameUpdateData({ date: invalidDate })).toThrow('Invalid date format. Use YYYY-MM-DD');
+        expect(() => GameValidator.validateGameUpdateDataComprehensive({ date: invalidDate })).toThrow('date must match the format: YYYY-MM-DD');
       });
     });
 
@@ -630,7 +566,7 @@ describe('GamesService - Expanded Tests', () => {
       const invalidStatuses = ['invalid', 'pending', 'active', 'done'];
       
       invalidStatuses.forEach(invalidStatus => {
-        expect(() => service.validateGameUpdateData({ status: invalidStatus })).toThrow('Invalid status value');
+        expect(() => GameValidator.validateGameUpdateDataComprehensive({ status: invalidStatus })).toThrow('Status must be one of: scheduled, live, final, postponed, cancelled, suspended, delayed, halftime, quarter, period');
       });
     });
 
@@ -638,7 +574,7 @@ describe('GamesService - Expanded Tests', () => {
       const invalidSports = ['', 'a'.repeat(51), 'b'.repeat(100)];
       
       invalidSports.forEach(invalidSport => {
-        expect(() => service.validateGameUpdateData({ sport: invalidSport })).toThrow('Sport name must be between 1 and 50 characters');
+        expect(() => GameValidator.validateGameUpdateDataComprehensive({ sport: invalidSport })).toThrow('Sport name must be between 1 and 50 characters');
       });
     });
 
@@ -649,7 +585,7 @@ describe('GamesService - Expanded Tests', () => {
         sport: 'basketball'
       };
 
-      expect(() => service.validateGameUpdateData(mixedData)).toThrow('Invalid status value');
+              expect(() => GameValidator.validateGameUpdateDataComprehensive(mixedData)).toThrow('Status must be one of: scheduled, live, final, postponed, cancelled, suspended, delayed, halftime, quarter, period');
     });
   });
 

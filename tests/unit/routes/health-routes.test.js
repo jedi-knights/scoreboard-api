@@ -44,15 +44,19 @@ describe('Health Routes Unit Tests', () => {
         .get('/health')
         .expect(200);
 
-      expect(response.body).toHaveProperty('status', 'OK');
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body).toHaveProperty('message');
       expect(response.body).toHaveProperty('timestamp');
-      expect(response.body).toHaveProperty('service', 'scoreboard-api');
-      expect(response.body).toHaveProperty('version', '1.0.0');
-      expect(response.body).toHaveProperty('environment');
-      expect(response.body).toHaveProperty('uptime');
-      expect(response.body).toHaveProperty('memory');
+      expect(response.body).toHaveProperty('data');
+      expect(response.body.data).toHaveProperty('status', 'OK');
+      expect(response.body.data).toHaveProperty('timestamp');
+      expect(response.body.data).toHaveProperty('service', 'scoreboard-api');
+      expect(response.body.data).toHaveProperty('version', '1.0.0');
+      expect(response.body.data).toHaveProperty('environment');
+      expect(response.body.data).toHaveProperty('uptime');
+      expect(response.body.data).toHaveProperty('memory');
       // Note: database property might not be present when no adapter is provided
-      expect(response.body).toHaveProperty('_links');
+      expect(response.body).toHaveProperty('links');
     });
 
     it('should return 200 OK with database health when adapter exists and healthy', async () => {
@@ -67,8 +71,9 @@ describe('Health Routes Unit Tests', () => {
         .get('/health')
         .expect(200);
 
-      expect(response.body).toHaveProperty('status', 'OK');
-      expect(response.body).toHaveProperty('database', mockDbHealth);
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body.data).toHaveProperty('status', 'OK');
+      expect(response.body.data).toHaveProperty('database', mockDbHealth);
       expect(mockDatabaseAdapter.getHealthStatus).toHaveBeenCalledTimes(1);
     });
 
@@ -84,8 +89,9 @@ describe('Health Routes Unit Tests', () => {
         .get('/health')
         .expect(200);
 
-      expect(response.body).toHaveProperty('status', 'OK');
-      expect(response.body).toHaveProperty('database', mockDbHealth);
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body.data).toHaveProperty('status', 'OK');
+      expect(response.body.data).toHaveProperty('database', mockDbHealth);
       expect(mockDatabaseAdapter.getHealthStatus).toHaveBeenCalledTimes(1);
     });
 
@@ -97,10 +103,11 @@ describe('Health Routes Unit Tests', () => {
         .get('/health')
         .expect(200);
 
-      expect(response.body).toHaveProperty('status', 'OK');
-      expect(response.body).toHaveProperty('database');
-      expect(response.body.database).toHaveProperty('status', 'unhealthy');
-      expect(response.body.database).toHaveProperty('error', 'Database connection failed');
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body.data).toHaveProperty('status', 'OK');
+      expect(response.body.data).toHaveProperty('database');
+      expect(response.body.data.database).toHaveProperty('status', 'unhealthy');
+      expect(response.body.data.database).toHaveProperty('error', 'Database connection failed');
       expect(mockDatabaseAdapter.getHealthStatus).toHaveBeenCalledTimes(1);
     });
 
@@ -109,10 +116,10 @@ describe('Health Routes Unit Tests', () => {
         .get('/health')
         .expect(200);
 
-      expect(response.body).toHaveProperty('_links');
-      expect(response.body._links).toHaveProperty('self');
-      expect(response.body._links).toHaveProperty('health');
-      expect(response.body._links).toHaveProperty('games');
+      expect(response.body).toHaveProperty('links');
+      expect(response.body.links).toHaveProperty('self');
+      expect(response.body.links).toHaveProperty('health');
+      expect(response.body.links).toHaveProperty('games');
     });
   });
 
@@ -122,9 +129,10 @@ describe('Health Routes Unit Tests', () => {
         .get('/health/liveness')
         .expect(200);
 
-      expect(response.body).toHaveProperty('status', 'alive');
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body.data).toHaveProperty('status', 'alive');
       expect(response.body).toHaveProperty('timestamp');
-      expect(response.body).toHaveProperty('service', 'scoreboard-api');
+      expect(response.body.data).toHaveProperty('service', 'scoreboard-api');
     });
 
     it('should return proper JSON content type', async () => {
@@ -145,9 +153,9 @@ describe('Health Routes Unit Tests', () => {
         .get('/health/readiness')
         .expect(503);
 
-      expect(response.body).toHaveProperty('status', 'not_ready');
+      expect(response.body).toHaveProperty('success', false);
       expect(response.body).toHaveProperty('timestamp');
-      expect(response.body).toHaveProperty('reason', 'Database adapter not initialized');
+      expect(response.body.details).toHaveProperty('reason', 'Database adapter not initialized');
       // Note: readiness endpoint doesn't include service property when not ready
     });
 
@@ -158,9 +166,9 @@ describe('Health Routes Unit Tests', () => {
         .get('/health/readiness')
         .expect(503);
 
-      expect(response.body).toHaveProperty('status', 'not_ready');
+      expect(response.body).toHaveProperty('success', false);
       expect(response.body).toHaveProperty('timestamp');
-      expect(response.body).toHaveProperty('reason', 'Database not connected');
+      expect(response.body.details).toHaveProperty('reason', 'Database not connected');
       // Note: readiness endpoint doesn't include service property when not ready
       expect(mockDatabaseAdapter.isConnected).toHaveBeenCalledTimes(1);
     });
@@ -172,10 +180,11 @@ describe('Health Routes Unit Tests', () => {
         .get('/health/readiness')
         .expect(200);
 
-      expect(response.body).toHaveProperty('status', 'ready');
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body.data).toHaveProperty('status', 'ready');
       expect(response.body).toHaveProperty('timestamp');
-      expect(response.body).toHaveProperty('service', 'scoreboard-api');
-      expect(response.body).toHaveProperty('database', 'connected');
+      expect(response.body.data).toHaveProperty('service', 'scoreboard-api');
+      expect(response.body.data).toHaveProperty('database', 'connected');
       expect(mockDatabaseAdapter.isConnected).toHaveBeenCalledTimes(1);
     });
 
@@ -187,10 +196,10 @@ describe('Health Routes Unit Tests', () => {
         .get('/health/readiness')
         .expect(503);
 
-      expect(response.body).toHaveProperty('status', 'not_ready');
+      expect(response.body).toHaveProperty('success', false);
       expect(response.body).toHaveProperty('timestamp');
-      expect(response.body).toHaveProperty('reason', 'Health check failed');
-      expect(response.body).toHaveProperty('error', 'Connection check failed');
+      expect(response.body.details).toHaveProperty('reason', 'Health check failed');
+      expect(response.body.details).toHaveProperty('error', 'Connection check failed');
       expect(mockDatabaseAdapter.isConnected).toHaveBeenCalledTimes(1);
     });
 
@@ -207,24 +216,25 @@ describe('Health Routes Unit Tests', () => {
         .get('/health/detailed')
         .expect(200);
 
-      expect(response.body).toHaveProperty('status', 'OK');
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body.data).toHaveProperty('status', 'OK');
       expect(response.body).toHaveProperty('timestamp');
-      expect(response.body).toHaveProperty('service', 'scoreboard-api');
-      expect(response.body).toHaveProperty('version', '1.0.0');
-      expect(response.body).toHaveProperty('environment');
-      expect(response.body).toHaveProperty('uptime');
-      expect(response.body).toHaveProperty('memory');
-      expect(response.body).toHaveProperty('cpu');
-      expect(response.body).toHaveProperty('platform');
-      expect(response.body).toHaveProperty('nodeVersion');
+      expect(response.body.data).toHaveProperty('service', 'scoreboard-api');
+      expect(response.body.data).toHaveProperty('version', '1.0.0');
+      expect(response.body.data).toHaveProperty('environment');
+      expect(response.body.data).toHaveProperty('uptime');
+      expect(response.body.data).toHaveProperty('memory');
+      expect(response.body.data).toHaveProperty('cpu');
+      expect(response.body.data).toHaveProperty('platform');
+      expect(response.body.data).toHaveProperty('nodeVersion');
       // Note: database property might not be present when no adapter is provided
-      expect(response.body).toHaveProperty('system');
+      expect(response.body.data).toHaveProperty('system');
       
       // Check system properties
-      expect(response.body.system).toHaveProperty('pid');
-      expect(response.body.system).toHaveProperty('title');
-      expect(response.body.system).toHaveProperty('arch');
-      expect(response.body.system).toHaveProperty('versions');
+      expect(response.body.data.system).toHaveProperty('pid');
+      expect(response.body.data.system).toHaveProperty('title');
+      expect(response.body.data.system).toHaveProperty('arch');
+      expect(response.body.data.system).toHaveProperty('versions');
     });
 
     it('should return 200 OK with database health when adapter exists and healthy', async () => {
@@ -240,8 +250,9 @@ describe('Health Routes Unit Tests', () => {
         .get('/health/detailed')
         .expect(200);
 
-      expect(response.body).toHaveProperty('status', 'OK');
-      expect(response.body).toHaveProperty('database', mockDbHealth);
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body.data).toHaveProperty('status', 'OK');
+      expect(response.body.data).toHaveProperty('database', mockDbHealth);
       expect(mockDatabaseAdapter.getHealthStatus).toHaveBeenCalledTimes(1);
     });
 
@@ -258,8 +269,9 @@ describe('Health Routes Unit Tests', () => {
         .get('/health/detailed')
         .expect(200);
 
-      expect(response.body).toHaveProperty('status', 'OK');
-      expect(response.body).toHaveProperty('database', mockDbHealth);
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body.data).toHaveProperty('status', 'OK');
+      expect(response.body.data).toHaveProperty('database', mockDbHealth);
       expect(mockDatabaseAdapter.getHealthStatus).toHaveBeenCalledTimes(1);
     });
 
@@ -271,10 +283,11 @@ describe('Health Routes Unit Tests', () => {
         .get('/health/detailed')
         .expect(200);
 
-      expect(response.body).toHaveProperty('status', 'OK');
-      expect(response.body).toHaveProperty('database');
-      expect(response.body.database).toHaveProperty('status', 'unhealthy');
-      expect(response.body.database).toHaveProperty('error', 'Database health check failed');
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body.data).toHaveProperty('status', 'OK');
+      expect(response.body.data).toHaveProperty('database');
+      expect(response.body.data.database).toHaveProperty('status', 'unhealthy');
+      expect(response.body.data.database).toHaveProperty('error', 'Database health check failed');
       expect(mockDatabaseAdapter.getHealthStatus).toHaveBeenCalledTimes(1);
     });
 
@@ -283,16 +296,16 @@ describe('Health Routes Unit Tests', () => {
         .get('/health/detailed')
         .expect(200);
 
-      expect(response.body).toHaveProperty('system');
-      expect(response.body.system).toHaveProperty('pid');
-      expect(response.body.system).toHaveProperty('title');
-      expect(response.body.system).toHaveProperty('arch');
-      expect(response.body.system).toHaveProperty('versions');
+      expect(response.body.data).toHaveProperty('system');
+      expect(response.body.data.system).toHaveProperty('pid');
+      expect(response.body.data.system).toHaveProperty('title');
+      expect(response.body.data.system).toHaveProperty('arch');
+      expect(response.body.data.system).toHaveProperty('versions');
       
-      expect(typeof response.body.system.pid).toBe('number');
-      expect(typeof response.body.system.title).toBe('string');
-      expect(typeof response.body.system.arch).toBe('string');
-      expect(typeof response.body.system.versions).toBe('object');
+      expect(typeof response.body.data.system.pid).toBe('number');
+      expect(typeof response.body.data.system.title).toBe('string');
+      expect(typeof response.body.data.system.arch).toBe('string');
+      expect(typeof response.body.data.system.versions).toBe('object');
     });
   });
 
@@ -308,8 +321,8 @@ describe('Health Routes Unit Tests', () => {
       const responses = await Promise.all(promises);
       
       responses.forEach(response => {
-        expect(response.body.status).toBe('OK');
-        expect(response.body.database).toEqual(mockDbHealth);
+        expect(response.body.data.status).toBe('OK');
+        expect(response.body.data.database).toEqual(mockDbHealth);
       });
 
       expect(mockDatabaseAdapter.getHealthStatus).toHaveBeenCalledTimes(5);
@@ -325,8 +338,8 @@ describe('Health Routes Unit Tests', () => {
       const responses = await Promise.all(promises);
       
       responses.forEach(response => {
-        expect(response.body.status).toBe('ready');
-        expect(response.body.database).toBe('connected');
+        expect(response.body.data.status).toBe('ready');
+        expect(response.body.data.database).toBe('connected');
       });
 
       expect(mockDatabaseAdapter.isConnected).toHaveBeenCalledTimes(5);
@@ -343,8 +356,8 @@ describe('Health Routes Unit Tests', () => {
       const responses = await Promise.all(promises);
       
       responses.forEach(response => {
-        expect(response.body.status).toBe('OK');
-        expect(response.body.database).toEqual(mockDbHealth);
+        expect(response.body.data.status).toBe('OK');
+        expect(response.body.data.database).toEqual(mockDbHealth);
       });
 
       expect(mockDatabaseAdapter.getHealthStatus).toHaveBeenCalledTimes(5);
@@ -364,24 +377,24 @@ describe('Health Routes Unit Tests', () => {
 
       // All endpoints should have timestamp and service
       expect(health.body).toHaveProperty('timestamp');
-      expect(health.body).toHaveProperty('service');
+      expect(health.body.data).toHaveProperty('service');
       expect(liveness.body).toHaveProperty('timestamp');
-      expect(liveness.body).toHaveProperty('service');
+      expect(liveness.body.data).toHaveProperty('service');
       expect(readiness.body).toHaveProperty('timestamp');
-      expect(readiness.body).toHaveProperty('service');
+      expect(readiness.body.data).toHaveProperty('service');
       expect(detailed.body).toHaveProperty('timestamp');
-      expect(detailed.body).toHaveProperty('service');
+      expect(detailed.body.data).toHaveProperty('service');
 
       // All should have the same service name
-      expect(health.body.service).toBe('scoreboard-api');
-      expect(liveness.body.service).toBe('scoreboard-api');
-      expect(readiness.body.service).toBe('scoreboard-api');
-      expect(detailed.body.service).toBe('scoreboard-api');
+      expect(health.body.data.service).toBe('scoreboard-api');
+      expect(liveness.body.data.service).toBe('scoreboard-api');
+      expect(readiness.body.data.service).toBe('scoreboard-api');
+      expect(detailed.body.data.service).toBe('scoreboard-api');
 
       // Check that database health is consistent
-      expect(health.body.database).toEqual(mockDbHealth);
-      expect(readiness.body.database).toBe('connected');
-      expect(detailed.body.database).toEqual(mockDbHealth);
+      expect(health.body.data.database).toEqual(mockDbHealth);
+      expect(readiness.body.data.database).toBe('connected');
+      expect(detailed.body.data.database).toEqual(mockDbHealth);
     });
   });
 });

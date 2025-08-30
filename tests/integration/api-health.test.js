@@ -6,15 +6,16 @@
 
 import { jest, describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import request from 'supertest';
-import { createApp } from '../../src/app.js';
+import { createTestApp } from './test-app-factory.js';
 
 describe('API Health Endpoint Integration Tests', () => {
   let app;
   let server;
 
   beforeAll(async () => {
-    // Create Express app
-    app = createApp();
+    // Create test Express app with mock dependencies
+    const testApp = createTestApp();
+    app = testApp.app;
     
     // Start server on a random port
     server = app.listen(0);

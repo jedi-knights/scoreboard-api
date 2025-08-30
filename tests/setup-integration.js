@@ -10,7 +10,9 @@ import fs from 'fs';
 import path from 'path';
 
 // Set longer timeout for integration tests
-jest.setTimeout(60000);
+import { businessConfig } from '../src/config/index.js';
+
+jest.setTimeout(businessConfig.testing.integrationTestTimeout);
 
 // Global integration test utilities
 global.integrationTestUtils = {
@@ -31,6 +33,16 @@ global.integrationTestUtils = {
         username: 'postgres',
         password: 'test_password',
         ssl: false
+      }
+    },
+    mysql: {
+      type: 'mysql',
+      config: {
+        host: 'localhost',
+        port: 3306,
+        database: 'scoreboard_test',
+        username: 'root',
+        password: 'test_password'
       }
     }
   },
@@ -99,7 +111,7 @@ global.integrationTestUtils = {
         if (attempts >= maxAttempts) {
           throw new Error('PostgreSQL container failed to become ready');
         }
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, businessConfig.testing.testDelay));
       }
     }
   },
@@ -167,7 +179,209 @@ global.integrationTestUtils = {
   },
 
   // Wait utility
-  wait: (ms) => new Promise(resolve => setTimeout(resolve, ms))
+  wait: (ms) => new Promise(resolve => setTimeout(resolve, ms)),
+
+  // Enhanced test data management
+  testData: {
+    // Sample test data for different scenarios
+    sampleGames: [
+      {
+        home_team: 'Lakers',
+        away_team: 'Warriors',
+        sport: 'basketball',
+        division: 'd1',
+        date: '2024-01-01',
+        status: 'scheduled'
+      },
+      {
+        home_team: 'Celtics',
+        away_team: 'Heat',
+        sport: 'basketball',
+        division: 'd1',
+        date: '2024-01-02',
+        status: 'scheduled'
+      }
+    ],
+    sampleTeams: [
+      {
+        name: 'Lakers',
+        sport: 'basketball',
+        division: 'd1',
+        gender: 'men',
+        city: 'Los Angeles',
+        state: 'CA'
+      },
+      {
+        name: 'Warriors',
+        sport: 'basketball',
+        division: 'd1',
+        gender: 'men',
+        city: 'San Francisco',
+        state: 'CA'
+      }
+    ],
+    sampleConferences: [
+      {
+        name: 'Pacific Conference',
+        sport: 'basketball',
+        division: 'd1',
+        gender: 'men',
+        region: 'West'
+      },
+      {
+        name: 'Atlantic Conference',
+        sport: 'basketball',
+        division: 'd1',
+        gender: 'men',
+        region: 'East'
+      }
+    ]
+  },
+
+  // Performance testing utilities
+  performance: {
+    // Measure execution time
+    measureExecutionTime: async (operation) => {
+      const start = performance.now();
+      const result = await operation();
+      const end = performance.now();
+      return {
+        result,
+        executionTime: end - start
+      };
+    },
+
+    // Load testing utilities
+    loadTest: async (operation, iterations = 100) => {
+      const times = [];
+      for (let i = 0; i < iterations; i++) {
+        const start = performance.now();
+        await operation();
+        const end = performance.now();
+        times.push(end - start);
+      }
+      
+      const avg = times.reduce((a, b) => a + b, 0) / times.length;
+      const min = Math.min(...times);
+      const max = Math.max(...times);
+      
+      return { avg, min, max, times };
+    },
+
+    // Stress testing utilities
+    stressTest: async (operation, maxConcurrency = 10) => {
+      const promises = [];
+      for (let i = 0; i < maxConcurrency; i++) {
+        promises.push(operation());
+      }
+      
+      const start = performance.now();
+      const results = await Promise.all(promises);
+      const end = performance.now();
+      
+      return {
+        results,
+        totalTime: end - start,
+        avgTime: (end - start) / maxConcurrency
+      };
+    }
+  },
+
+  // Data validation utilities
+  validation: {
+    // Validate database schema
+    validateSchema: async (client, expectedTables) => {
+      const tables = await client.query(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public'
+      `);
+      
+      const actualTables = tables.rows.map(row => row.table_name);
+      const missingTables = expectedTables.filter(table => !actualTables.includes(table));
+      
+      return {
+        valid: missingTables.length === 0,
+        missingTables,
+        actualTables
+      };
+    },
+
+    // Validate data integrity
+    validateDataIntegrity: async (client) => {
+      const checks = [];
+      
+      // Check for orphaned records
+      const orphanedGames = await client.query(`
+        SELECT g.id FROM games g 
+        LEFT JOIN teams ht ON g.home_team_id = ht.id 
+        LEFT JOIN teams at ON g.away_team_id = at.id 
+        WHERE ht.id IS NULL OR at.id IS NULL
+      `);
+      
+      checks.push({
+        name: 'Orphaned Games',
+        valid: orphanedGames.rows.length === 0,
+        count: orphanedGames.rows.length
+      });
+      
+      return checks;
+    }
+  },
+
+  // Test scenario builders
+  scenarios: {
+    // Create a complete game scenario with teams and conference
+    createCompleteGameScenario: async (client) => {
+      // Create conference
+      const conferenceResult = await client.query(`
+        INSERT INTO conferences (name, sport, division, gender, region)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id
+      `, ['Test Conference', 'basketball', 'd1', 'men', 'West']);
+      
+      const conferenceId = conferenceResult.rows[0].id;
+      
+      // Create teams
+      const homeTeamResult = await client.query(`
+        INSERT INTO teams (name, sport, division, gender, city, state, conference_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING id
+      `, ['Home Team', 'basketball', 'd1', 'men', 'Home City', 'CA', conferenceId]);
+      
+      const awayTeamResult = await client.query(`
+        INSERT INTO teams (name, sport, division, gender, city, state, conference_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING id
+      `, ['Away Team', 'basketball', 'd1', 'men', 'Away City', 'NY', conferenceId]);
+      
+      // Create game
+      const gameResult = await client.query(`
+        INSERT INTO games (home_team_id, away_team_id, sport, division, date, status)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id
+      `, [homeTeamResult.rows[0].id, awayTeamResult.rows[0].id, 'basketball', 'd1', '2024-01-01', 'scheduled']);
+      
+      return {
+        conferenceId,
+        homeTeamId: homeTeamResult.rows[0].id,
+        awayTeamId: awayTeamResult.rows[0].id,
+        gameId: gameResult.rows[0].id
+      };
+    },
+
+    // Create a batch ingestion scenario
+    createBatchIngestionScenario: async (client, count = 5) => {
+      const scenarios = [];
+      
+      for (let i = 0; i < count; i++) {
+        const scenario = await this.createCompleteGameScenario(client);
+        scenarios.push(scenario);
+      }
+      
+      return scenarios;
+    }
+  }
 };
 
 // Global setup for integration tests
