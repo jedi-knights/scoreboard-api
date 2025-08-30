@@ -326,7 +326,7 @@ describe('GamesService', () => {
         mockGamesRepository.findById.mockResolvedValue(null);
 
         // Act & Assert
-        await expect(gamesService.getGameById(999)).rejects.toThrow('Game not found');
+        await expect(gamesService.getGameById(999)).rejects.toThrow('Game with identifier \'999\' not found');
       });
 
       it('should handle database errors gracefully', async () => {

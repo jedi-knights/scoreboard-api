@@ -14,9 +14,8 @@ const mockNCAAIngestionController = {
   ingestGames: mockIngestGames
 };
 
-jest.unstable_mockModule('../../../src/controllers/ncaa-ingestion-controller.js', () => ({
-  NCAAIngestionController: jest.fn(() => mockNCAAIngestionController)
-}));
+// Mock the controller globally
+globalThis.NCAAIngestionController = jest.fn(() => mockNCAAIngestionController);
 
 describe('NCAA Ingestion Routes', () => {
   let container;

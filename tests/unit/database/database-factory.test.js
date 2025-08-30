@@ -1,50 +1,40 @@
 import { jest } from '@jest/globals';
-import { DatabaseFactory } from '../../../src/database/database-factory.js';
-import { SQLiteAdapter } from '../../../src/database/adapters/sqlite-adapter.js';
 
-// Mock the SQLiteAdapter
-jest.unstable_mockModule('../../../src/database/adapters/sqlite-adapter.js', () => ({
-  SQLiteAdapter: jest.fn()
-}));
+// Mock the SQLiteAdapter globally
+globalThis.SQLiteAdapter = jest.fn();
 
-// Mock the config
-jest.unstable_mockModule('../../../src/config/index.js', () => ({
-  databaseConfig: {
-    type: 'sqlite',
-    sqlite: {
-      databasePath: './data/scoreboard.db',
-      verbose: false
-    },
-    postgres: {
-      host: 'localhost',
-      port: 5432,
-      database: 'scoreboard',
-      username: 'postgres',
-      password: 'password'
-    },
-    dynamodb: {
-      region: 'us-east-1',
-      endpointUrl: undefined,
-      tables: {
-        games: 'scoreboard-games',
-        teams: 'scoreboard-teams'
-      }
+// Mock the config globally
+globalThis.databaseConfig = {
+  type: 'sqlite',
+  sqlite: {
+    databasePath: './data/scoreboard.db',
+    verbose: false
+  },
+  postgres: {
+    host: 'localhost',
+    port: 5432,
+    database: 'scoreboard',
+    username: 'postgres',
+    password: 'password'
+  },
+  dynamodb: {
+    region: 'us-east-1',
+    endpointUrl: undefined,
+    tables: {
+      games: 'scoreboard-games',
+      teams: 'scoreboard-teams'
     }
   }
-}));
+};
 
 describe('DatabaseFactory', () => {
   let mockSQLiteAdapter;
   let DatabaseFactory;
-  let SQLiteAdapter;
 
   beforeAll(async () => {
-    // Import the mocked modules
+    // Import the factory module
     const factoryModule = await import('../../../src/database/database-factory.js');
-    const adapterModule = await import('../../../src/database/adapters/sqlite-adapter.js');
-
     DatabaseFactory = factoryModule.DatabaseFactory;
-    SQLiteAdapter = adapterModule.SQLiteAdapter;
   });
 
   beforeEach(() => {
@@ -61,7 +51,7 @@ describe('DatabaseFactory', () => {
     };
 
     // Mock the SQLiteAdapter constructor
-    SQLiteAdapter.mockImplementation(() => mockSQLiteAdapter);
+    globalThis.SQLiteAdapter.mockImplementation(() => mockSQLiteAdapter);
   });
 
   describe('createAdapter', () => {

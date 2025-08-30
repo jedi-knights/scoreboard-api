@@ -145,8 +145,10 @@ export class GamesRepository extends BaseRepository {
     const params = [];
     let paramIndex = 1;
 
-    paramIndex = this.applyAllFilters(filters, query, params, paramIndex);
-    this.applySortingAndPagination(query, options, paramIndex, params);
+    const filterResult = this.applyAllFilters(filters, query, params, paramIndex);
+    paramIndex = filterResult.paramIndex;
+    query = filterResult.query;
+    query = this.applySortingAndPagination(query, options, paramIndex, params);
 
     return { query, params };
   }
@@ -157,7 +159,7 @@ export class GamesRepository extends BaseRepository {
    * @param {string} query - Current query
    * @param {Array} params - Parameters array
    * @param {number} paramIndex - Current parameter index
-   * @returns {number} New parameter index
+   * @returns {Object} Object with new parameter index and modified query
    * @private
    */
   applyAllFilters (filters, query, params, paramIndex) {
@@ -184,7 +186,7 @@ export class GamesRepository extends BaseRepository {
     if (filters.awayTeam) params.push(filters.awayTeam);
     paramIndex = teamFilters.paramIndex;
 
-    return paramIndex;
+    return { paramIndex, query };
   }
 
   /**
@@ -193,6 +195,7 @@ export class GamesRepository extends BaseRepository {
    * @param {Object} options - Query options
    * @param {number} paramIndex - Current parameter index
    * @param {Array} params - Parameters array
+   * @returns {string} Modified query string
    * @private
    */
   applySortingAndPagination (query, options, paramIndex, params) {
@@ -201,6 +204,8 @@ export class GamesRepository extends BaseRepository {
     query += ` ORDER BY ${sortBy} ${sortOrder.toUpperCase()}`;
     query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
     params.push(limit, offset);
+    
+    return query;
   }
 
   /**

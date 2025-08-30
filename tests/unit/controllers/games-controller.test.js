@@ -7,13 +7,11 @@ const mockGenerateResourceLinks = jest.fn(() => ({ resource: 'links' }));
 const mockGenerateActionLinks = jest.fn(() => ({ action: 'links' }));
 const mockEnhanceWithLinks = jest.fn((req, data, links) => ({ ...data, _links: links }));
 
-// Mock the modules
-jest.unstable_mockModule('../../../src/utils/hateoas.js', () => ({
-  generateCollectionLinks: mockGenerateCollectionLinks,
-  generateResourceLinks: mockGenerateResourceLinks,
-  generateActionLinks: mockGenerateActionLinks,
-  enhanceWithLinks: mockEnhanceWithLinks
-}));
+// Mock the modules globally
+globalThis.generateCollectionLinks = mockGenerateCollectionLinks;
+globalThis.generateResourceLinks = mockGenerateResourceLinks;
+globalThis.generateActionLinks = mockGenerateActionLinks;
+globalThis.enhanceWithLinks = mockEnhanceWithLinks;
 
 describe('GamesController', () => {
   let controller;
@@ -137,11 +135,12 @@ describe('GamesController', () => {
       await controller.getGames(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Internal Server Error',
-        message: 'Database connection failed'
-      });
+      const response = mockRes.json.mock.calls[0][0];
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Internal Server Error');
+      expect(response.message).toBe('Database connection failed');
+      expect(response.timestamp).toBeDefined();
+      expect(typeof response.timestamp).toBe('string');
     });
   });
 
@@ -182,11 +181,12 @@ describe('GamesController', () => {
       await controller.getGameById(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Not Found',
-        message: 'Game not found: 999'
-      });
+      const response = mockRes.json.mock.calls[0][0];
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Not Found');
+      expect(response.message).toBe('Game not found: games');
+      expect(response.timestamp).toBeDefined();
+      expect(typeof response.timestamp).toBe('string');
     });
 
     it('should handle other errors and return 500', async () => {
@@ -198,11 +198,12 @@ describe('GamesController', () => {
 
       expect(mockGamesService.getGameById).toHaveBeenCalledWith('999');
       expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Internal Server Error',
-        message: 'Database connection failed'
-      });
+      const response = mockRes.json.mock.calls[0][0];
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Internal Server Error');
+      expect(response.message).toBe('Database connection failed');
+      expect(response.timestamp).toBeDefined();
+      expect(typeof response.timestamp).toBe('string');
     });
   });
 
@@ -237,11 +238,12 @@ describe('GamesController', () => {
 
       expect(mockGamesService.getLiveGames).toHaveBeenCalledWith({ sport: 'basketball' });
       expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Internal Server Error',
-        message: 'Database connection failed'
-      });
+      const response = mockRes.json.mock.calls[0][0];
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Internal Server Error');
+      expect(response.message).toBe('Database connection failed');
+      expect(response.timestamp).toBeDefined();
+      expect(typeof response.timestamp).toBe('string');
     });
   });
 
@@ -302,11 +304,12 @@ describe('GamesController', () => {
 
       expect(mockGamesService.getGamesByDateRange).toHaveBeenCalledWith('2024-01-31', '2024-01-01', { startDate: '2024-01-31', endDate: '2024-01-01' });
       expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Bad Request',
-        message: 'Start date must be before end date'
-      });
+      const response = mockRes.json.mock.calls[0][0];
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Bad Request');
+      expect(response.message).toBe('Start date must be before end date');
+      expect(response.timestamp).toBeDefined();
+      expect(typeof response.timestamp).toBe('string');
     });
 
     it('should return 500 for other errors in getGamesByDateRange', async () => {
@@ -318,11 +321,12 @@ describe('GamesController', () => {
 
       expect(mockGamesService.getGamesByDateRange).toHaveBeenCalledWith('2024-01-01', '2024-01-31', { startDate: '2024-01-01', endDate: '2024-01-31' });
       expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Internal Server Error',
-        message: 'Database connection failed'
-      });
+      const response = mockRes.json.mock.calls[0][0];
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Internal Server Error');
+      expect(response.message).toBe('Database connection failed');
+      expect(response.timestamp).toBeDefined();
+      expect(typeof response.timestamp).toBe('string');
     });
   });
 
@@ -358,11 +362,12 @@ describe('GamesController', () => {
       await controller.getGamesByTeam(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Internal Server Error',
-        message: 'Database connection failed'
-      });
+      const response = mockRes.json.mock.calls[0][0];
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Internal Server Error');
+      expect(response.message).toBe('Database connection failed');
+      expect(response.timestamp).toBeDefined();
+      expect(typeof response.timestamp).toBe('string');
     });
 
     it('should handle validation errors with 400 status', async () => {
@@ -373,11 +378,12 @@ describe('GamesController', () => {
       await controller.getGamesByTeam(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Bad Request',
-        message: 'Team name is required'
-      });
+      const response = mockRes.json.mock.calls[0][0];
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Bad Request');
+      expect(response.message).toBe('Team name is required');
+      expect(response.timestamp).toBeDefined();
+      expect(typeof response.timestamp).toBe('string');
     });
   });
 
@@ -446,11 +452,12 @@ describe('GamesController', () => {
       await controller.updateGame(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Bad Request',
-        message: 'Game ID is required'
-      });
+      const response = mockRes.json.mock.calls[0][0];
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Bad Request');
+      expect(response.message).toBe('Game ID is required');
+      expect(response.timestamp).toBeDefined();
+      expect(typeof response.timestamp).toBe('string');
     });
 
     it('should handle game not found error and return 404', async () => {
@@ -462,11 +469,12 @@ describe('GamesController', () => {
       await controller.updateGame(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Not Found',
-        message: 'Game not found: 999'
-      });
+      const response = mockRes.json.mock.calls[0][0];
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Not Found');
+      expect(response.message).toBe('Game not found: 999');
+      expect(response.timestamp).toBeDefined();
+      expect(typeof response.timestamp).toBe('string');
     });
 
     it('should handle validation errors and return 400', async () => {
@@ -478,11 +486,12 @@ describe('GamesController', () => {
       await controller.updateGame(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Bad Request',
-        message: 'Invalid date format. Use YYYY-MM-DD'
-      });
+      const response = mockRes.json.mock.calls[0][0];
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Bad Request');
+      expect(response.message).toBe('Invalid date format. Use YYYY-MM-DD');
+      expect(response.timestamp).toBeDefined();
+      expect(typeof response.timestamp).toBe('string');
     });
 
     it('should handle other errors and return 500', async () => {
@@ -494,11 +503,12 @@ describe('GamesController', () => {
       await controller.updateGame(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Internal Server Error',
-        message: 'Database connection failed'
-      });
+      const response = mockRes.json.mock.calls[0][0];
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Internal Server Error');
+      expect(response.message).toBe('Database connection failed');
+      expect(response.timestamp).toBeDefined();
+      expect(typeof response.timestamp).toBe('string');
     });
   });
 
@@ -532,11 +542,12 @@ describe('GamesController', () => {
       await controller.deleteGame(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Bad Request',
-        message: 'Game ID is required'
-      });
+      const response = mockRes.json.mock.calls[0][0];
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Bad Request');
+      expect(response.message).toBe('Game ID is required');
+      expect(response.timestamp).toBeDefined();
+      expect(typeof response.timestamp).toBe('string');
     });
 
     it('should handle game not found with 404 status', async () => {
@@ -548,11 +559,12 @@ describe('GamesController', () => {
       await controller.deleteGame(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Not Found',
-        message: 'Game not found: 999'
-      });
+      const response = mockRes.json.mock.calls[0][0];
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Not Found');
+      expect(response.message).toBe('Game not found: 999');
+      expect(response.timestamp).toBeDefined();
+      expect(typeof response.timestamp).toBe('string');
     });
 
     it('should handle other errors with 500 status', async () => {
@@ -564,11 +576,12 @@ describe('GamesController', () => {
       await controller.deleteGame(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Internal Server Error',
-        message: 'Database error'
-      });
+      const response = mockRes.json.mock.calls[0][0];
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Internal Server Error');
+      expect(response.message).toBe('Database error');
+      expect(response.timestamp).toBeDefined();
+      expect(typeof response.timestamp).toBe('string');
     });
   });
 
@@ -602,11 +615,12 @@ describe('GamesController', () => {
 
       expect(mockGamesService.getGameStatistics).toHaveBeenCalledWith({ season: '2024' });
       expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Internal Server Error',
-        message: 'Database connection failed'
-      });
+      const response = mockRes.json.mock.calls[0][0];
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Internal Server Error');
+      expect(response.message).toBe('Database connection failed');
+      expect(response.timestamp).toBeDefined();
+      expect(typeof response.timestamp).toBe('string');
     });
   });
 

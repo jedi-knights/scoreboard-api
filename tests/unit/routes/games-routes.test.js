@@ -24,9 +24,8 @@ const mockGamesController = {
   deleteGame: mockDeleteGame
 };
 
-jest.unstable_mockModule('../../../src/controllers/games-controller.js', () => ({
-  GamesController: jest.fn(() => mockGamesController)
-}));
+// Mock the controller globally
+globalThis.GamesController = jest.fn(() => mockGamesController);
 
 describe('Games Routes', () => {
   let container;

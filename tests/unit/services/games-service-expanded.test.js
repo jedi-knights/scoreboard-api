@@ -109,7 +109,7 @@ describe('GamesService - Expanded Tests', () => {
     it('should handle game not found', async () => {
       mockGamesRepository.findById.mockResolvedValue(null);
 
-      await expect(service.getGameById('nonexistent')).rejects.toThrow('Game not found');
+      await expect(service.getGameById('nonexistent')).rejects.toThrow('Game with identifier \'nonexistent\' not found');
     });
 
     it('should handle repository errors', async () => {
